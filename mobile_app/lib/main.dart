@@ -548,9 +548,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Widget _buildUniversitySearch() {
     final universities = [
-      'VTU', 'JNTU', 'Anna University', 'GTU', 'RGPV', 'Mumbai University',
-      'Pune University', 'Osmania University', 'Bangalore University', 'Calicut University',
-      'Kerala University', 'Madras University', 'Andhra University', 'PTU', 'KTU', 'Other'
+      'Amrita Viswa Vidyapeetham',
+      'VTU', 'JNTU Hyderabad', 'JNTU Kakinada', 'JNTU Anantapur',
+      'Anna University', 'GTU', 'RGPV', 'Mumbai University',
+      'Pune University (SPPU)', 'Osmania University', 'Bangalore University',
+      'Calicut University', 'Kerala University', 'KTU', 'Madras University',
+      'Andhra University', 'PTU', 'CU (Chandigarh University)',
+      'LPU (Lovely Professional University)', 'SRM University',
+      'Manipal University', 'BITS Pilani', 'NIT Warangal',
+      'Vellore Institute of Technology (VIT)', 'Delhi University',
+      'Jawaharlal Nehru University (JNU)', 'Hyderabad University', 'Other'
     ];
     return Column(
       children: [
@@ -775,29 +782,109 @@ class _SubjectPickerScreenState extends State<SubjectPickerScreen> {
   final TextEditingController _searchCtrl = TextEditingController();
   String _query = '';
 
-  // Big master list of subjects to search from
+  // Comprehensive master subject list covering ALL engineering branches + school
   final List<String> _allSubjects = [
-    // School
+    // ─── School ───────────────────────────────────────────────────────
     'Mathematics', 'Physics', 'Chemistry', 'Biology', 'English',
     'Social Studies', 'History', 'Geography', 'Civics', 'Economics',
-    'Hindi', 'Kannada', 'Sanskrit', 'Computer Science', 'Coding',
-    // Engineering - CSE/IT
-    'Data Structures', 'Algorithms', 'Operating Systems', 'DBMS',
-    'Computer Networks', 'Software Engineering', 'OOPs with Java',
-    'OOPs with C++', 'Python Programming', 'Web Technologies',
+    'Hindi', 'Kannada', 'Telugu', 'Tamil', 'Sanskrit', 'Computer Science', 'Coding',
+    'Environmental Science', 'Moral Science', 'Physical Education',
+
+    // ─── Common Engineering (1st & 2nd Year) ─────────────────────────
+    'Engineering Mathematics I', 'Engineering Mathematics II',
+    'Engineering Mathematics III', 'Engineering Mathematics IV',
+    'Engineering Physics', 'Engineering Chemistry',
+    'Engineering Graphics', 'Engineering Mechanics',
+    'Basic Electrical Engineering', 'Basic Electronics',
+    'C Programming', 'Workshop Practice', 'Environmental Studies',
+    'Constitution of India', 'Professional Ethics', 'Technical English',
+    'Communication Skills', 'Universal Human Values',
+
+    // ─── CSE / IT ─────────────────────────────────────────────────────
+    'Data Structures', 'Data Structures & Algorithms', 'Algorithms',
+    'Design & Analysis of Algorithms', 'Operating Systems',
+    'Database Management Systems (DBMS)', 'Computer Networks',
+    'Software Engineering', 'OOPs with Java', 'OOPs with C++',
+    'Python Programming', 'Web Technologies', 'Internet of Things (IoT)',
     'Discrete Mathematics', 'Digital Logic Design', 'Computer Organisation',
-    'Machine Learning', 'Artificial Intelligence', 'Cloud Computing',
-    'Big Data Analytics', 'Cyber Security', 'Mobile Computing',
-    // Engineering - ECE
-    'Electronic Devices', 'Signals & Systems', 'Network Theory',
-    'Electromagnetic Theory', 'Digital Signal Processing', 'VLSI Design',
-    'Microprocessors', 'Communication Systems', 'Control Systems',
-    // Engineering - ME/CE
-    'Engineering Mechanics', 'Thermodynamics', 'Fluid Mechanics',
-    'Strength of Materials', 'Manufacturing Processes', 'Machine Design',
-    // Common Engineering
-    'Engineering Mathematics', 'Engineering Physics', 'Engineering Chemistry',
-    'Environmental Science', 'Constitution of India', 'Professional Ethics',
+    'Computer Architecture', 'Microprocessors', 'Automata Theory',
+    'Compiler Design', 'Machine Learning', 'Artificial Intelligence',
+    'Deep Learning', 'Natural Language Processing (NLP)',
+    'Cloud Computing', 'Big Data Analytics', 'Data Mining',
+    'Cyber Security', 'Cryptography & Network Security',
+    'Mobile Computing', 'Mobile Application Development',
+    'Distributed Systems', 'Parallel Computing',
+    'Software Testing', 'Agile Development',
+    'Computer Graphics', 'Image Processing',
+    'Blockchain Technology', 'DevOps',
+    'Full Stack Development', 'React JS', 'Node JS', 'Angular JS',
+
+    // ─── ECE ──────────────────────────────────────────────────────────
+    'Electronic Devices & Circuits', 'Electronic Devices',
+    'Signals & Systems', 'Network Theory', 'Network Analysis',
+    'Electromagnetic Theory', 'Electromagnetic Fields',
+    'Digital Signal Processing (DSP)', 'VLSI Design',
+    'Analog Circuits', 'Analog Communication',
+    'Digital Communication', 'Communication Systems',
+    'Wireless Communication', 'Optical Fiber Communication',
+    'Antenna & Wave Propagation', 'Microwave Engineering',
+    'Control Systems', 'Linear Integrated Circuits',
+    'Embedded Systems', 'ARM Microcontrollers',
+    'Digital Electronics', 'RF Circuit Design',
+    'Radar & Navigation Systems', 'Satellite Communication',
+
+    // ─── EEE (Electrical & Electronics) ──────────────────────────────
+    'Electrical Circuit Analysis', 'Electrical Machines I', 'Electrical Machines II',
+    'Power Systems I', 'Power Systems II', 'Power Electronics',
+    'Switchgear & Protection', 'High Voltage Engineering',
+    'Electric Drives', 'Industrial Drives',
+    'Power System Analysis', 'Control Engineering',
+    'Generation Transmission & Distribution',
+    'Special Electrical Machines', 'Utilization of Electrical Energy',
+    'Renewable Energy Systems', 'Smart Grid Technology',
+    'Programmable Logic Controllers (PLC)',
+    'Instrumentation & Measurements',
+
+    // ─── Mechanical Engineering (ME) ──────────────────────────────────
+    'Thermodynamics', 'Fluid Mechanics', 'Heat Transfer',
+    'Strength of Materials', 'Manufacturing Processes',
+    'Machine Design', 'Kinematics of Machinery', 'Dynamics of Machinery',
+    'Theory of Machines', 'Industrial Engineering',
+    'CAD/CAM', 'Finite Element Analysis (FEA)',
+    'Automobile Engineering', 'Robotics', 'Mechatronics',
+    'Refrigeration & Air Conditioning', 'Turbo Machinery',
+    'Operations Research', 'Production Engineering',
+    'Metrology & Quality Control', 'Casting & Welding',
+
+    // ─── Civil Engineering (CE) ───────────────────────────────────────
+    'Structural Analysis', 'Reinforced Cement Concrete (RCC)',
+    'Soil Mechanics', 'Foundation Engineering',
+    'Hydraulics & Fluid Mechanics', 'Water Resources Engineering',
+    'Transportation Engineering', 'Highway Engineering',
+    'Surveying', 'Remote Sensing & GIS',
+    'Environmental Engineering', 'Water Supply Engineering',
+    'Construction Management', 'Estimating & Costing',
+    'Urban Planning', 'Bridge Engineering', 'Steel Structures',
+
+    // ─── Chemical Engineering (ChE) ───────────────────────────────────
+    'Chemical Reaction Engineering', 'Mass Transfer Operations',
+    'Heat & Mass Transfer', 'Fluid Flow Operations',
+    'Process Control & Instrumentation', 'Chemical Technology',
+    'Petroleum Refining', 'Polymer Engineering',
+    'Biochemical Engineering',
+
+    // ─── Biotechnology / Biomedical ───────────────────────────────────
+    'Biochemistry', 'Microbiology', 'Genetic Engineering',
+    'Cell Biology', 'Molecular Biology',
+    'Bioprocess Engineering', 'Immunology',
+    'Medical Electronics', 'Bioinformatics',
+
+    // ─── MBA / Management ─────────────────────────────────────────────
+    'Principles of Management', 'Marketing Management',
+    'Financial Management', 'Human Resource Management',
+    'Operations Management', 'Business Law',
+    'Entrepreneurship Development', 'Strategic Management',
+    'Accounting & Finance', 'Organizational Behaviour',
   ];
 
   @override
