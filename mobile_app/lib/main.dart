@@ -1566,11 +1566,15 @@ class _StudyPlannerTabState extends State<StudyPlannerTab>
   final List<Map<String, dynamic>> _planSubjects = [];
 
   bool _generated = false;
+  late DateTime _weekStart; // Monday of the displayed week
 
   @override
   void initState() {
     super.initState();
     _tabCtrl = TabController(length: 3, vsync: this);
+    // Set week start to Monday of the current week
+    final now = DateTime.now();
+    _weekStart = now.subtract(Duration(days: now.weekday - 1));
   }
 
   @override
@@ -2057,7 +2061,7 @@ class _StudyPlannerTabState extends State<StudyPlannerTab>
     await Printing.layoutPdf(onLayout: (_) async => doc.save());
   }
 
-  // ── Timetable Tab ─────────────────────────────────────────────────────────
+  // ── Timetable Tab – full weekly calendar grid ────────────────────────────
   Widget _buildTimetableTab() {
     if (!_generated || _planSubjects.isEmpty) {
       return Center(
@@ -2066,147 +2070,408 @@ class _StudyPlannerTabState extends State<StudyPlannerTab>
           children: [
             const Icon(LucideIcons.calendarDays, size: 48, color: Colors.white24),
             const SizedBox(height: 16),
-            const Text('No plan generated yet.', style: TextStyle(color: Colors.white54, fontSize: 16)),
+            const Text('No plan generated yet.',
+                style: TextStyle(color: Colors.white54, fontSize: 16)),
             const SizedBox(height: 8),
-            const Text('Add subjects and tap\n"Generate AI Study Plan"',
-                textAlign: TextAlign.center, style: TextStyle(color: Colors.white24, fontSize: 13)),
+            const Text('Add subjects and tap "Generate AI Study Plan"',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white24, fontSize: 13)),
           ],
         ),
       );
     }
 
-    final days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-    final shortDays = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+    final now = DateTime.now();
+    final shortMonths = [
+      '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    final weekEnd = _weekStart.add(const Duration(days: 6));
+    final weekLabel =
+        '${shortMonths[_weekStart.month]} ${_weekStart.day} – ${shortMonths[weekEnd.month]} ${weekEnd.day}';
+    final shortDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+    // Determine study start hour/min based on preference
+    int startH;
+    switch (_studyTime) {
+      case 'Afternoon': startH = 13; break;
+      case 'Evening':   startH = 16; break;
+      case 'Night':     startH = 19; break;
+      default:          startH = 8;  // Morning
+    }
+
+    // Build sessions for a given day (0=Mon..6=Sun):
+    // Each block = 45 min study + breakLength min break
+    List<Map<String, dynamic>> _sessionsForDay(int d) {
+      final sessions = <Map<String, dynamic>>[];
+      int curMinutes = startH * 60;
+      int remaining = (_studyHours * 60).toInt();
+      int slot = 0;
+      while (remaining > 30) {
+        final blockLen = 45;
+        final breakLen = _breakLength.toInt();
+        final subjectIdx = (d + slot) % _planSubjects.length;
+        final sessionKey = '${d}_$slot';
+        sessions.add({
+          'subjectIdx': subjectIdx,
+          'startMin': curMinutes,
+          'endMin': curMinutes + blockLen,
+          'breakEndMin': curMinutes + blockLen + breakLen,
+          'key': sessionKey,
+        });
+        curMinutes += blockLen + breakLen;
+        remaining -= (blockLen + breakLen);
+        slot++;
+      }
+      return sessions;
+    }
+
+    // Compute earliest and latest minute across all days
+    final allSessions = List.generate(7, (d) => _sessionsForDay(d));
+    int minMinute = allSessions
+        .expand((s) => s)
+        .map((s) => s['startMin'] as int)
+        .fold(startH * 60, math.min);
+    int maxMinute = allSessions
+        .expand((s) => s)
+        .map((s) => s['breakEndMin'] as int)
+        .fold(startH * 60, math.max);
+
+    // Snap to hour boundaries
+    minMinute = (minMinute ~/ 60) * 60;
+    maxMinute = ((maxMinute + 59) ~/ 60) * 60;
+
+    final totalHours = ((maxMinute - minMinute) / 60).ceil().clamp(2, 12);
+    const double rowHeight = 60.0;
+    const double timeColW = 50.0;
+    const double dayColW = 130.0;
+    const double headerH = 56.0;
+
+    String _fmt(int totalMin) {
+      final h = totalMin ~/ 60;
+      final m = totalMin % 60;
+      return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}';
+    }
 
     return Column(
       children: [
-        // Download PDF button
+        // ── Week Nav + PDF ──────────────────────────────────────────────
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-          child: ElevatedButton.icon(
-            onPressed: _downloadPdf,
-            icon: const Icon(LucideIcons.download, size: 16),
-            label: const Text('Download Timetable PDF'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF10B981),
-              foregroundColor: Colors.white,
-              minimumSize: const Size(double.infinity, 46),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              elevation: 6,
-            ),
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+          child: Row(
+            children: [
+              IconButton(
+                onPressed: () => setState(() =>
+                    _weekStart = _weekStart.subtract(const Duration(days: 7))),
+                icon: const Icon(LucideIcons.chevronLeft, size: 18, color: Colors.white70),
+                padding: EdgeInsets.zero,
+              ),
+              Expanded(
+                child: Center(
+                  child: Text(weekLabel,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                ),
+              ),
+              IconButton(
+                onPressed: () => setState(() =>
+                    _weekStart = _weekStart.add(const Duration(days: 7))),
+                icon: const Icon(LucideIcons.chevronRight, size: 18, color: Colors.white70),
+                padding: EdgeInsets.zero,
+              ),
+              const SizedBox(width: 4),
+              ElevatedButton.icon(
+                onPressed: _downloadPdf,
+                icon: const Icon(LucideIcons.download, size: 13),
+                label: const Text('PDF', style: TextStyle(fontSize: 12)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF10B981),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ],
           ),
         ),
 
-        // Timetable list
+        // ── Calendar Grid ───────────────────────────────────────────────
         Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            itemCount: days.length,
-            itemBuilder: (context, dayIdx) {
-              final subjectIdx = dayIdx % _planSubjects.length;
-              final sub = _planSubjects[subjectIdx];
-              final color = _subjectColors[subjectIdx % _subjectColors.length];
-              final isDone = _doneSessions['${dayIdx}_0'] == true;
-
-              return FadeInLeft(
-                delay: Duration(milliseconds: 60 * dayIdx),
-                child: GestureDetector(
-                  onTap: () => setState(() {
-                    _doneSessions['${dayIdx}_0'] = !isDone;
-                  }),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    margin: const EdgeInsets.only(bottom: 12),
-                    decoration: BoxDecoration(
-                      color: isDone ? color.withOpacity(0.15) : const Color(0xFF0F172A),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: isDone ? color.withOpacity(0.6) : color.withOpacity(0.2),
-                        width: isDone ? 2 : 1,
-                      ),
-                      boxShadow: isDone
-                          ? [BoxShadow(color: color.withOpacity(0.2), blurRadius: 12, offset: const Offset(0, 4))]
-                          : [],
-                    ),
-                    child: Row(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.vertical,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SizedBox(
+                width: timeColW + dayColW * 7,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ── Day headers ─────────────────────────────────────
+                    Row(
                       children: [
-                        // Colored day strip
+                        // Time column header (empty)
                         Container(
-                          width: 56,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            color: color,
-                            borderRadius: const BorderRadius.only(
-                              topLeft: Radius.circular(16),
-                              bottomLeft: Radius.circular(16),
-                            ),
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(shortDays[dayIdx],
-                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10)),
-                              const SizedBox(height: 4),
-                              if (isDone) const Icon(LucideIcons.checkCircle2, color: Colors.white, size: 20)
-                              else const Icon(LucideIcons.clock, color: Colors.white70, size: 18),
-                            ],
-                          ),
+                          width: timeColW,
+                          height: headerH,
+                          alignment: Alignment.center,
+                          child: const Text('Time',
+                              style: TextStyle(color: Colors.white38, fontSize: 11)),
                         ),
-                        // Content
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        // Day headers
+                        ...List.generate(7, (d) {
+                          final day = _weekStart.add(Duration(days: d));
+                          final isToday = day.year == now.year &&
+                              day.month == now.month &&
+                              day.day == now.day;
+                          return Container(
+                            width: dayColW,
+                            height: headerH,
+                            decoration: BoxDecoration(
+                              color: isToday
+                                  ? const Color(0xFF6366F1).withOpacity(0.15)
+                                  : Colors.transparent,
+                              border: Border(
+                                left: BorderSide(color: Colors.white.withOpacity(0.06)),
+                                bottom: BorderSide(color: Colors.white.withOpacity(0.06)),
+                              ),
+                            ),
                             child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Text(sub['name'] as String,
+                                Text(shortDays[d],
                                     style: TextStyle(
                                         fontWeight: FontWeight.bold,
-                                        fontSize: 15,
-                                        color: isDone ? color : Colors.white,
-                                        decoration: isDone ? TextDecoration.lineThrough : null)),
-                                const SizedBox(height: 4),
+                                        fontSize: 13,
+                                        color: isToday
+                                            ? const Color(0xFF6366F1)
+                                            : Colors.white70)),
                                 Text(
-                                    '${_studyHours.toInt()}h study • ${_breakLength.toInt()}m break • $_studyTime',
-                                    style: const TextStyle(color: Colors.white38, fontSize: 11)),
-                                const SizedBox(height: 6),
-                                Row(children: [
-                                  Text('Difficulty: ${(sub['difficulty'] as double).toInt()}/10',
-                                      style: TextStyle(fontSize: 10, color: color.withOpacity(0.8))),
-                                  const Spacer(),
-                                  AnimatedSwitcher(
-                                    duration: const Duration(milliseconds: 300),
-                                    child: isDone
-                                        ? Container(
-                                            key: const ValueKey('done'),
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                            decoration: BoxDecoration(
-                                              color: color.withOpacity(0.2),
-                                              borderRadius: BorderRadius.circular(8),
-                                            ),
-                                            child: Text('✓ Done', style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold)),
-                                          )
-                                        : Container(
-                                            key: const ValueKey('pending'),
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                            decoration: BoxDecoration(
-                                              color: Colors.white.withOpacity(0.06),
-                                              borderRadius: BorderRadius.circular(8),
-                                            ),
-                                            child: const Text('Tap to complete', style: TextStyle(color: Colors.white38, fontSize: 10)),
-                                          ),
-                                  ),
-                                ]),
+                                    '${shortMonths[day.month]} ${day.day}',
+                                    style: TextStyle(
+                                        fontSize: 10,
+                                        color: isToday
+                                            ? const Color(0xFF6366F1)
+                                            : Colors.white38)),
                               ],
                             ),
+                          );
+                        }),
+                      ],
+                    ),
+
+                    // ── Time rows ────────────────────────────────────────
+                    Stack(
+                      children: [
+                        // Background grid lines + time labels
+                        Column(
+                          children: List.generate(totalHours, (hIdx) {
+                            final minute = minMinute + hIdx * 60;
+                            return SizedBox(
+                              height: rowHeight,
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Time label
+                                  Container(
+                                    width: timeColW,
+                                    padding: const EdgeInsets.only(top: 6, right: 6),
+                                    child: Text(
+                                      _fmt(minute),
+                                      textAlign: TextAlign.right,
+                                      style: const TextStyle(
+                                          color: Colors.white24, fontSize: 10),
+                                    ),
+                                  ),
+                                  // Grid cells
+                                  ...List.generate(7, (d) => Container(
+                                    width: dayColW,
+                                    height: rowHeight,
+                                    decoration: BoxDecoration(
+                                      border: Border(
+                                        left: BorderSide(color: Colors.white.withOpacity(0.04)),
+                                        top: BorderSide(color: Colors.white.withOpacity(0.04)),
+                                      ),
+                                    ),
+                                  )),
+                                ],
+                              ),
+                            );
+                          }),
+                        ),
+
+                        // Session blocks positioned absolutely
+                        Positioned(
+                          left: timeColW,
+                          top: 0,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: List.generate(7, (d) {
+                              final daySessions = allSessions[d];
+                              final dayDate =
+                                  _weekStart.add(Duration(days: d));
+                              final isToday = dayDate.year == now.year &&
+                                  dayDate.month == now.month &&
+                                  dayDate.day == now.day;
+
+                              return SizedBox(
+                                width: dayColW,
+                                height: totalHours * rowHeight,
+                                child: Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    // Today highlight backdrop
+                                    if (isToday)
+                                      Container(
+                                        width: dayColW,
+                                        height: totalHours * rowHeight,
+                                        color: const Color(0xFF6366F1).withOpacity(0.04),
+                                      ),
+
+                                    // Session cards
+                                    ...daySessions.map((session) {
+                                      final startMin =
+                                          session['startMin'] as int;
+                                      final endMin =
+                                          session['endMin'] as int;
+                                      final breakEndMin =
+                                          session['breakEndMin'] as int;
+                                      final subjectIdx =
+                                          session['subjectIdx'] as int;
+                                      final sessionKey =
+                                          session['key'] as String;
+                                      final Sub =
+                                          _planSubjects[subjectIdx];
+                                      final color = _subjectColors[
+                                          subjectIdx %
+                                              _subjectColors.length];
+                                      final isDone =
+                                          _doneSessions[sessionKey] == true;
+
+                                      final topPx = ((startMin - minMinute) /
+                                              60) *
+                                          rowHeight;
+                                      final studyPx = ((endMin - startMin) /
+                                              60) *
+                                          rowHeight;
+                                      final breakPx =
+                                          ((breakEndMin - endMin) / 60) *
+                                              rowHeight;
+
+                                      return Positioned(
+                                        top: topPx,
+                                        left: 2,
+                                        right: 2,
+                                        child: Column(
+                                          children: [
+                                            // Study block
+                                            GestureDetector(
+                                              onTap: () => setState(() =>
+                                                  _doneSessions[
+                                                      sessionKey] =
+                                                      !isDone),
+                                              child: AnimatedContainer(
+                                                duration: const Duration(
+                                                    milliseconds: 250),
+                                                height: studyPx - 2,
+                                                decoration: BoxDecoration(
+                                                  color: isDone
+                                                      ? color.withOpacity(0.35)
+                                                      : color.withOpacity(0.85),
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                  border: isDone
+                                                      ? Border.all(
+                                                          color: Colors.white38,
+                                                          width: 1.5)
+                                                      : null,
+                                                ),
+                                                padding:
+                                                    const EdgeInsets.all(5),
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Text(
+                                                      Sub['name'] as String,
+                                                      style: TextStyle(
+                                                          color: isDone
+                                                              ? Colors.white54
+                                                              : Colors.white,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          fontSize: 10,
+                                                          decoration: isDone
+                                                              ? TextDecoration
+                                                                  .lineThrough
+                                                              : null),
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
+                                                    if (studyPx > 30)
+                                                      Text(
+                                                        '${_fmt(startMin)}–${_fmt(endMin)}',
+                                                        style: const TextStyle(
+                                                            color: Colors.white70,
+                                                            fontSize: 8),
+                                                      ),
+                                                    if (studyPx > 44)
+                                                      Row(
+                                                        children: [
+                                                          _TinyBtn(
+                                                            label: isDone
+                                                                ? '✓'
+                                                                : 'Mark',
+                                                            color: Colors.white24,
+                                                            onTap: () => setState(() =>
+                                                                _doneSessions[
+                                                                    sessionKey] =
+                                                                    !isDone),
+                                                          ),
+                                                          const SizedBox(
+                                                              width: 4),
+                                                          _TinyBtn(
+                                                            label: 'Start',
+                                                            color: Colors.white24,
+                                                            onTap: () {},
+                                                          ),
+                                                        ],
+                                                      ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                            // Break block
+                                            if (breakPx > 4)
+                                              Container(
+                                                height: breakPx - 2,
+                                                alignment: Alignment.centerLeft,
+                                                padding:
+                                                    const EdgeInsets.only(
+                                                        left: 4),
+                                                child: Text(
+                                                    'Break  ${_fmt(endMin)}',
+                                                    style: const TextStyle(
+                                                        color: Colors.white24,
+                                                        fontSize: 8)),
+                                              ),
+                                          ],
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ],
+                                ),
+                              );
+                            }),
                           ),
                         ),
                       ],
                     ),
-                  ),
+                  ],
                 ),
-              );
-            },
+              ),
+            ),
           ),
         ),
       ],
@@ -2347,6 +2612,32 @@ class _PlannerCard extends StatelessWidget {
           const SizedBox(height: 20),
           child,
         ],
+      ),
+    );
+  }
+}
+
+// Small pill button used inside timetable session blocks
+class _TinyBtn extends StatelessWidget {
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _TinyBtn({required this.label, required this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(label,
+            style: const TextStyle(
+                color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
       ),
     );
   }
