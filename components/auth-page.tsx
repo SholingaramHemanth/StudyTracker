@@ -57,7 +57,14 @@ export function AuthPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-background flex flex-col lg:flex-row relative">
+    <div className="min-h-screen bg-background flex flex-col lg:flex-row relative overflow-hidden">
+      {/* Dynamic Background Elements */}
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 rounded-full blur-[120px] animate-blob" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-accent/20 rounded-full blur-[120px] animate-blob animation-delay-2000" />
+        <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] bg-secondary/20 rounded-full blur-[100px] animate-blob animation-delay-4000" />
+      </div>
+
       <div className="absolute top-4 right-4 z-50">
         <ThemeToggle />
       </div>
@@ -102,8 +109,8 @@ export function AuthPage() {
       </div>
 
       {/* Right side - Auth Form */}
-      <div className="flex-1 p-8 lg:p-12 flex items-center justify-center bg-background relative">
-        <div className="absolute inset-0 bg-grid-slate-100 [mask-image:linear-gradient(0deg,#fff,rgba(255,255,255,0.6))] dark:bg-grid-slate-700/25" />
+      <div className="flex-1 p-8 lg:p-12 flex items-center justify-center bg-mesh relative">
+        <div className="absolute inset-0 bg-grid-white/[0.05] [mask-image:linear-gradient(0deg,#fff,rgba(255,255,255,0.6))]" />
         <Card className="w-full max-w-md border-border/50 shadow-2xl relative z-10 animate-fade-in-up delay-300 backdrop-blur-sm bg-card/95">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl transition-all duration-300">
