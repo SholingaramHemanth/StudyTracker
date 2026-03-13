@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useStudy } from '@/lib/study-context'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,6 +18,14 @@ export function AuthPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const { login, signup } = useStudy()
+  const cardRef = useRef<HTMLDivElement>(null)
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!cardRef.current) return
+    const { left, top } = cardRef.current.getBoundingClientRect()
+    cardRef.current.style.setProperty('--mouse-x', `${e.clientX - left}px`)
+    cardRef.current.style.setProperty('--mouse-y', `${e.clientY - top}px`)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -72,7 +80,7 @@ export function AuthPage() {
       <div className="flex-1 bg-primary/5 p-8 lg:p-12 flex flex-col justify-center overflow-hidden">
         <div className="max-w-md mx-auto lg:mx-0">
           <div className="flex items-center gap-3 mb-8 animate-fade-in-up">
-            <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center animate-pulse">
+            <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center animate-floating shadow-lg shadow-primary/20">
               <GraduationCap className="w-7 h-7 text-primary-foreground" />
             </div>
             <h1 className="text-2xl font-bold text-foreground">Smart Study Tracker</h1>
@@ -109,9 +117,32 @@ export function AuthPage() {
       </div>
 
       {/* Right side - Auth Form */}
-      <div className="flex-1 p-8 lg:p-12 flex items-center justify-center bg-mesh relative">
+      <div 
+        className="flex-1 p-8 lg:p-12 flex items-center justify-center bg-mesh relative"
+        onMouseMove={handleMouseMove}
+      >
         <div className="absolute inset-0 bg-grid-white/[0.05] [mask-image:linear-gradient(0deg,#fff,rgba(255,255,255,0.6))]" />
-        <Card className="w-full max-w-md border-border/50 shadow-2xl relative z-10 animate-fade-in-up delay-300 backdrop-blur-sm bg-card/95">
+        
+        <div className="relative group/card w-full max-w-md">
+          {/* Spotlight Glow */}
+          <div 
+            className="absolute -inset-[1px] rounded-[var(--radius)] bg-gradient-to-r from-primary/50 to-accent/50 opacity-0 group-hover/card:opacity-100 transition-opacity duration-500 blur-sm z-0"
+            style={{
+              background: `radial-gradient(400px circle at var(--mouse-x) var(--mouse-y), rgba(var(--primary-rgb), 0.4), transparent 40%)`
+            } as any}
+          />
+          
+          <Card 
+            ref={cardRef}
+            className="w-full border-border/50 shadow-2xl relative z-10 animate-fade-in-up delay-300 backdrop-blur-md bg-card/90 overflow-hidden group/inner"
+          >
+            {/* Inner Interactive Layer */}
+            <div 
+              className="absolute inset-0 pointer-events-none opacity-0 group-hover/card:opacity-100 transition-opacity duration-500 z-0"
+              style={{
+                background: `radial-gradient(600px circle at var(--mouse-x) var(--mouse-y), rgba(var(--primary-rgb), 0.08), transparent 40%)`
+              } as any}
+            />
           <CardHeader className="text-center">
             <CardTitle className="text-2xl transition-all duration-300">
               {isLogin ? 'Welcome back' : 'Create account'}
@@ -201,6 +232,7 @@ export function AuthPage() {
             </div>
           </CardContent>
         </Card>
+        </div>
       </div>
     </div>
   )
