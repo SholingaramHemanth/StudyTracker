@@ -1,0 +1,26 @@
+name: study_tracker
+description: A smart AI-powered study companion mobile app.
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  google_generative_ai: ^0.4.0
+  google_fonts: ^6.2.0
+  lucide_icons: ^0.301.0
+  shared_preferences: ^2.2.3
+  intl: ^0.19.0
+  provider: ^6.1.2
+  animate_do: ^3.3.4
+  flutter_spinkit: ^5.2.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
