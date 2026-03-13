@@ -890,7 +890,7 @@ class _SubjectPickerScreenState extends State<SubjectPickerScreen> {
   @override
   void initState() {
     super.initState();
-    _added = List<String>.from(widget.suggested);
+    _added = []; // Start empty — user adds subjects manually via search
     _searchCtrl.addListener(() => setState(() => _query = _searchCtrl.text.trim()));
   }
 
