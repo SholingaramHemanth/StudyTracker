@@ -25,6 +25,8 @@ interface Message {
                   isAction?: boolean
 }
 
+import { chatWithAssistant } from '@/app/actions/ai'
+
 export function AIChatPage() {
                   const { user, setTimerConfig, startTimer, timer } = useStudy()
                   const [messages, setMessages] = useState<Message[]>([
@@ -59,78 +61,61 @@ export function AIChatPage() {
                                     }
 
                                     setMessages(prev => [...prev, userMessage])
+                                    const currentInput = input
                                     setInput('')
                                     setIsTyping(true)
 
-                                    // Simulate AI response
-                                    setTimeout(() => {
-                                                      const response = generateAIResponse(input)
-                                                      setMessages(prev => [...prev, response])
-                                                      setIsTyping(false)
-                                    }, 1000)
-                  }
+                                    try {
+                                                      const lowerText = currentInput.toLowerCase()
 
-                  const generateAIResponse = (text: string): Message => {
-                                    const lowerText = text.toLowerCase()
-                                    const studyKeywords = ['study', 'learn', 'math', 'science', 'quiz', 'timer', 'exam', 'book', 'test', 'homework', 'physics', 'chemistry', 'biology', 'history']
+                                                      // Check for timer commands that need local action
+                                                      if (lowerText.includes('timer') || lowerText.includes('start') || lowerText.includes('set')) {
+                                                                        const minMatch = currentInput.match(/(\d+)\s*(minutes|min|m)/i)
+                                                                        const minutes = minMatch ? parseInt(minMatch[1]) : 25
+                                                                        const subject = user?.subjects?.find(s => lowerText.includes(s.name.toLowerCase()))
 
-                                    // Check if it's a study-related query
-                                    const isStudyRelated = studyKeywords.some(keyword => lowerText.includes(keyword)) || lowerText.length < 5
+                                                                        if (subject) {
+                                                                                          setTimerConfig({ subjectId: subject.id, duration: minutes, type: 'custom' })
+                                                                                          setTimeout(() => startTimer(), 500)
+                                                                                          const actionMessage: Message = {
+                                                                                                            id: Date.now().toString(),
+                                                                                                            role: 'assistant',
+                                                                                                            content: `Perfect! I've set a ${minutes}-minute study timer for ${subject.name} and started it for you. Good luck!`,
+                                                                                                            timestamp: new Date(),
+                                                                                                            isAction: true
+                                                                                          }
+                                                                                          setMessages(prev => [...prev, actionMessage])
+                                                                                          setIsTyping(false)
+                                                                                          return
+                                                                        }
+                                                      }
 
-                                    if (!isStudyRelated) {
-                                                      return {
+                                                      // Call Gemini API
+                                                      const history = messages.map(m => ({
+                                                                        role: m.role === 'assistant' ? 'model' as const : 'user' as const,
+                                                                        content: m.content
+                                                      }))
+                                                      history.push({ role: 'user', content: currentInput })
+
+                                                      const aiResponse = await chatWithAssistant(history)
+
+                                                      const assistantMessage: Message = {
                                                                         id: Date.now().toString(),
                                                                         role: 'assistant',
-                                                                        content: "I'm sorry, I'm designed to help you with your studies only. Please ask me something related to your learning journey, or ask me to set a study timer!",
+                                                                        content: aiResponse,
                                                                         timestamp: new Date()
                                                       }
-                                    }
-
-                                    // Timer logic
-                                    if (lowerText.includes('timer') || lowerText.includes('start') || lowerText.includes('set')) {
-                                                      // Try to find minutes
-                                                      const minMatch = text.match(/(\d+)\s*(minutes|min|m)/i)
-                                                      const minutes = minMatch ? parseInt(minMatch[1]) : 25
-
-                                                      // Try to find subject
-                                                      const subject = user?.subjects?.find(s => lowerText.includes(s.name.toLowerCase()))
-
-                                                      if (subject) {
-                                                                        setTimerConfig({ subjectId: subject.id, duration: minutes, type: 'custom' })
-                                                                        setTimeout(() => startTimer(), 500)
-                                                                        return {
-                                                                                          id: Date.now().toString(),
-                                                                                          role: 'assistant',
-                                                                                          content: `Perfect! I've set a ${minutes}-minute study timer for ${subject.name} and started it for you. Good luck!`,
-                                                                                          timestamp: new Date(),
-                                                                                          isAction: true
-                                                                        }
-                                                      } else if (lowerText.includes('timer')) {
-                                                                        setTimerConfig({ duration: minutes, type: 'custom' })
-                                                                        return {
-                                                                                          id: Date.now().toString(),
-                                                                                          role: 'assistant',
-                                                                                          content: `I've prepared a ${minutes}-minute timer for you. Please select a subject so we can get started!`,
-                                                                                          timestamp: new Date(),
-                                                                                          isAction: true
-                                                                        }
+                                                      setMessages(prev => [...prev, assistantMessage])
+                                    } catch (error) {
+                                                      const errorMessage: Message = {
+                                                                        id: Date.now().toString(),
+                                                                        role: 'assistant',
+                                                                        content: "I'm having trouble connecting to my brain right now. Please try again in a moment.",
+                                                                        timestamp: new Date()
                                                       }
-                                    }
-
-                                    // Default study response
-                                    const studyResponses = [
-                                                      "That's a great area to focus on! Have you tried breaking down the topic into smaller chunks?",
-                                                      "Consistency is key! Even 25 minutes of focused study can make a big difference.",
-                                                      "Don't forget to take short breaks to keep your mind fresh. Would you like me to set a Pomodoro timer?",
-                                                      "I'm here to support your learning goals. You're doing a great job staying focused!",
-                                                      "If you're finding this topic difficult, try explaining it to someone else (or me!) to reinforce your understanding."
-                                    ]
-
-                                    return {
-                                                      id: Date.now().toString(),
-                                                      role: 'assistant',
-                                                      content: studyResponses[Math.floor(Math.random() * studyResponses.length)],
-                                                      timestamp: new Date()
+                                                      setMessages(prev => [...prev, errorMessage])
+                                    } finally {
+                                                      setIsTyping(false)
                                     }
                   }
 
@@ -221,12 +206,12 @@ export function AIChatPage() {
                                                                         </div>
                                                       </Card>
 
-                                                      <div className="p-3 rounded-xl bg-orange-500/5 border border-orange-500/10 flex gap-3 items-center">
-                                                                        <AlertCircle className="w-5 h-5 text-orange-500 flex-shrink-0" />
-                                                                        <p className="text-xs text-orange-600 font-medium">
-                                                                                          Note: This AI assistant is strictly for study-related purposes. Off-topic conversations will be filtered.
+                                                      <div className="p-3 rounded-xl bg-blue-500/5 border border-blue-500/10 flex gap-3 items-center">
+                                                                        <Sparkles className="w-5 h-5 text-blue-500 flex-shrink-0" />
+                                                                        <p className="text-xs text-blue-600 font-medium">
+                                                                                          Your Study Companion: Powered by Gemini 1.5 Flash. I can help with studies, timers, and general career advice!
                                                                         </p>
-                                                      </div>
-                                    </div>
+                                                                        </div>
+                          </div>
                   )
 }

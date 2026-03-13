@@ -373,7 +373,7 @@ export function StudyPlannerPage() {
                 <button
                   key={time}
                   onClick={() => setPreferredTime(time)}
-                  className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all \${
+                  className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${
                     preferredTime === time 
                       ? 'border-primary bg-primary/10 text-primary' 
                       : 'hover:bg-muted'
@@ -449,7 +449,7 @@ export function StudyPlannerPage() {
                   const date = addDays(currentWeekStart, i);
                   const isToday = isSameDay(date, new Date());
                   return (
-                    <div key={day} className={`p-3 text-center \${isToday ? 'bg-primary/10 text-primary font-bold' : 'font-semibold'}`}>
+                    <div key={day} className={`p-3 text-center ${isToday ? 'bg-primary/10 text-primary font-bold' : 'font-semibold'}`}>
                       <div>{day}</div>
                       <div className="text-xs font-normal mt-1 opacity-70">{format(date, 'MMM d')}</div>
                     </div>
@@ -484,7 +484,7 @@ export function StudyPlannerPage() {
                       return (
                         <div
                           key={slot.id}
-                          className={`my-1 p-2 rounded-md shadow-sm border flex flex-col gap-1 transition-all group overflow-hidden relative \${slot.completed ? 'opacity-60 bg-muted/50' : ''}`}
+                          className={`my-1 p-2 rounded-md shadow-sm border flex flex-col gap-1 transition-all group overflow-hidden relative ${slot.completed ? 'opacity-60 bg-muted/50' : ''}`}
                           style={{
                             backgroundColor: slot.completed ? undefined : hexToRgba(subject.color, 0.15),
                             borderLeftWidth: '4px',

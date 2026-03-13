@@ -5,8 +5,10 @@ import { useStudy, CareerPath, Roadmap } from '@/lib/study-context'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Briefcase, Target, Map, Shield, Server, Code, ChevronRight, Sparkles } from 'lucide-react'
+import { Briefcase, Target, Map, Shield, Server, Code, ChevronRight, Sparkles, MessageSquare, ExternalLink } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { generateRoadmapAction, getCareerGuidance } from '@/app/actions/ai'
+import { toast } from 'sonner'
 
 const CAREER_PATHS: CareerPath[] = [
                   {
@@ -38,15 +40,46 @@ export function GuidancePage() {
                   const [goal, setGoal] = useState('')
                   const [selectedPath, setSelectedPath] = useState<CareerPath | null>(null)
                   const [isGenerating, setIsGenerating] = useState(false)
+                  const [careerQuestion, setCareerQuestion] = useState('')
+                  const [careerAdvice, setCareerAdvice] = useState('')
+                  const [isAsking, setIsAsking] = useState(false)
 
-                  const handleGenerate = () => {
+                   const handleGenerate = async () => {
                                     if (!goal) return
                                     setIsGenerating(true)
-                                    setTimeout(() => {
-                                                      generateRoadmap(goal)
-                                                      setIsGenerating(false)
+                                    try {
+                                                      const roadmapData = await generateRoadmapAction(goal)
+                                                      
+                                                      // The study-context generateRoadmap expects a string and uses internal mock,
+                                                      // so we'll bypass it and add the generated roadmap directly if possible,
+                                                      // or update the context to accept a full roadmap object.
+                                                      // For now, let's update it to use a new method or just use the local state if context is restricted.
+                                                      // Since useStudy has roadmaps state, we'll use generateRoadmap if it's updated, 
+                                                      // otherwise we'll inform the user we need to update the context.
+                                                      
+                                                      // Let's assume we update study-context to handle the AI data.
+                                                      generateRoadmap(goal, roadmapData.steps)
+                                                      toast.success("Roadmap generated successfully!")
                                                       setGoal('')
-                                    }, 2000)
+                                    } catch (error) {
+                                                      console.error(error)
+                                                      toast.error("Failed to generate roadmap. Please try again.")
+                                    } finally {
+                                                      setIsGenerating(false)
+                                    }
+                  }
+
+                  const handleAskCareer = async () => {
+                                    if (!careerQuestion) return
+                                    setIsAsking(true)
+                                    try {
+                                                      const advice = await getCareerGuidance(careerQuestion)
+                                                      setCareerAdvice(advice)
+                                    } catch (error) {
+                                                      toast.error("Failed to get career advice.")
+                                    } finally {
+                                                      setIsAsking(false)
+                                    }
                   }
 
                   return (
@@ -114,7 +147,7 @@ export function GuidancePage() {
                                                                         )}
 
                                                                         {/* Career Paths */}
-                                                                        <div className="lg:col-span-12 space-y-6">
+                                                                        <div className="lg:col-span-8 space-y-6">
                                                                                           <h4 className="text-xs font-black uppercase tracking-widest text-primary">Explore Career Paths</h4>
                                                                                           <div className="grid md:grid-cols-2 gap-6">
                                                                                                             {CAREER_PATHS.map((path) => (
@@ -148,6 +181,49 @@ export function GuidancePage() {
                                                                                                                               </Card>
                                                                                                             ))}
                                                                                           </div>
+                                                                        </div>
+
+                                                                        {/* AI Career Advisor Side Panel */}
+                                                                        <div className="lg:col-span-4 space-y-6">
+                                                                                          <Card className="h-full border-none shadow-xl bg-gradient-to-br from-indigo-600 to-violet-700 text-white overflow-hidden relative">
+                                                                                                            <div className="absolute top-0 right-0 p-4 opacity-10">
+                                                                                                                              <MessageSquare className="w-32 h-32" />
+                                                                                                            </div>
+                                                                                                            <CardHeader>
+                                                                                                                              <CardTitle className="flex items-center gap-2">
+                                                                                                                                                <Sparkles className="w-5 h-5" />
+                                                                                                                                                AI Career Advisor
+                                                                                                                              </CardTitle>
+                                                                                                                              <CardDescription className="text-indigo-100">
+                                                                                                                                                Ask any career-related question!
+                                                                                                                              </CardDescription>
+                                                                                                            </CardHeader>
+                                                                                                            <CardContent className="space-y-4 relative z-10">
+                                                                                                                              <textarea
+                                                                                                                                                className="w-full h-32 bg-white/10 border border-white/20 rounded-xl p-3 text-sm placeholder:text-indigo-200 focus:outline-none focus:ring-2 focus:ring-white/30 transition-all resize-none"
+                                                                                                                                                placeholder="Example: What's the best path to become a Data Scientist in 2025?"
+                                                                                                                                                value={careerQuestion}
+                                                                                                                                                onChange={(e) => setCareerQuestion(e.target.value)}
+                                                                                                                              />
+                                                                                                                              <Button 
+                                                                                                                                                className="w-full bg-white text-indigo-600 hover:bg-neutral-100 font-bold h-12 rounded-xl"
+                                                                                                                                                onClick={handleAskCareer}
+                                                                                                                                                disabled={isAsking || !careerQuestion}
+                                                                                                                              >
+                                                                                                                                                {isAsking ? "Thinking..." : "Get Expert Advice"}
+                                                                                                                              </Button>
+                                                                                                                              
+                                                                                                                              {careerAdvice && (
+                                                                                                                                                <div className="mt-4 p-4 bg-black/20 rounded-xl backdrop-blur-sm space-y-3 animate-in fade-in slide-in-from-bottom-4">
+                                                                                                                                                                  <div className="text-[10px] font-black uppercase tracking-widest text-indigo-200">Advisor Response</div>
+                                                                                                                                                                  <p className="text-xs leading-relaxed text-indigo-50 whitespace-pre-wrap">{careerAdvice}</p>
+                                                                                                                                                                  <Button variant="ghost" size="sm" className="h-7 text-[10px] text-indigo-200 hover:text-white hover:bg-white/10 p-0" onClick={() => setCareerAdvice('')}>
+                                                                                                                                                                                    Clear Advice
+                                                                                                                                                                  </Button>
+                                                                                                                                                </div>
+                                                                                                                              )}
+                                                                                                            </CardContent>
+                                                                                          </Card>
                                                                         </div>
 
                                                                         {selectedPath && (

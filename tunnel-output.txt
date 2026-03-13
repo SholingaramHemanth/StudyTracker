@@ -1,3 +1,0 @@
-[32mForwarding HTTP traffic from https://9dd40ab4171c434f-27-61-62-169.serveousercontent.com
-client_loop: send disconnect: Connection reset
-[0m

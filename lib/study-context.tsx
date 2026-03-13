@@ -93,7 +93,7 @@ interface StudyContextType {
   downloadedTopics: string[]
   downloadTopic: (topicId: string) => void
   roadmaps: Roadmap[]
-  generateRoadmap: (goal: string) => void
+  generateRoadmap: (goal: string, steps?: { month: string; target: string }[]) => void
   revisionReminders: { id: string; topicName: string; date: string }[]
   // Timer state
   timer: {
@@ -465,11 +465,11 @@ export function StudyProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const generateRoadmap = (goal: string) => {
+  const generateRoadmap = (goal: string, steps?: { month: string; target: string }[]) => {
     const newRoadmap: Roadmap = {
       id: crypto.randomUUID(),
       goal,
-      steps: [
+      steps: steps || [
         { month: 'Month 1', target: 'Foundation & Core Concepts' },
         { month: 'Month 2', target: 'Advanced Modules & Practice' },
         { month: 'Month 3', target: 'Full Mock Tests & Revision' },
