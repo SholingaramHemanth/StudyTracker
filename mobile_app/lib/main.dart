@@ -334,16 +334,18 @@ class OnboardingScreen extends StatefulWidget {
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
-  int step = 0; // 0: Category, 1: Engineering Department, 2: Semester
+  // Steps: 0=Category, 1=Dept(Engg)/Year(Inter), 2=Sem(Engg)
+  int step = 0;
   String? selectedCategory;
-  String? selectedDept;
-  String? selectedSem;
+  String? selectedDept;   // for Engg: dept name; for Inter: year name
+  String? selectedSem;    // for Engg: sem name
 
   final List<Map<String, dynamic>> categories = [
-    {'title': 'Class 1 to 5', 'subtitle': 'Foundational Learning', 'icon': LucideIcons.baby},
-    {'title': 'Class 6 to 10', 'subtitle': 'Secondary Education', 'icon': LucideIcons.bookOpen},
-    {'title': 'Engineering', 'subtitle': 'Technical & Professional', 'icon': LucideIcons.cpu},
-    {'title': 'Other', 'subtitle': 'Skill-based & Competitive', 'icon': LucideIcons.layoutGrid},
+    {'title': 'Class 1 to 5',            'subtitle': 'Foundational Learning',      'icon': LucideIcons.baby},
+    {'title': 'Class 6 to 10',           'subtitle': 'Secondary Education',        'icon': LucideIcons.bookOpen},
+    {'title': 'Intermediate (Inter)',     'subtitle': '11th & 12th Standard',       'icon': LucideIcons.school},
+    {'title': 'Engineering',             'subtitle': 'Technical & Professional',   'icon': LucideIcons.cpu},
+    {'title': 'Other',                   'subtitle': 'Skill-based & Competitive',  'icon': LucideIcons.layoutGrid},
   ];
 
   final List<String> departments = [
@@ -354,11 +356,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     'Information Technology (IT)',
   ];
 
+  final List<Map<String,dynamic>> interYears = [
+    {'title': '1st Year (11th)', 'subtitle': 'MPC / BiPC / CEC / MEC', 'icon': LucideIcons.bookMarked},
+    {'title': '2nd Year (12th)', 'subtitle': 'Board Exam Preparation',   'icon': LucideIcons.award},
+  ];
+
   final Map<String, List<String>> subjectsData = {
+    // Engineering
     'Computer Science (CSE)_Sem 3': ['Data Structures', 'Discrete Math', 'Digital Logic', 'OOPs with Java'],
     'Computer Science (CSE)_Sem 4': ['Operating Systems', 'Design & Analysis of Algorithms', 'DBMS', 'Computer Org'],
-    'Electronics (ECE)_Sem 3': ['Network Theory', 'Electronic Devices', 'Signals & Systems', 'Mathematics III'],
-    'default': ['Mathematics', 'Physics', 'Chemistry', 'English', 'Coding']
+    'Electronics (ECE)_Sem 3':      ['Network Theory', 'Electronic Devices', 'Signals & Systems', 'Mathematics III'],
+    // Intermediate
+    '1st Year (11th)': ['Mathematics', 'Physics', 'Chemistry', 'English', 'Telugu / Hindi'],
+    '2nd Year (12th)': ['Mathematics', 'Physics', 'Chemistry', 'English', 'Telugu / Hindi', 'IPE Practicals'],
+    // School
+    'Class 1 to 5':  ['English', 'Mathematics', 'Environmental Science', 'Hindi / Telugu'],
+    'Class 6 to 10': ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'Social Studies', 'English', 'Hindi'],
+    // Default
+    'default': ['Mathematics', 'Physics', 'Chemistry', 'English', 'Coding'],
   };
 
   @override
@@ -377,11 +392,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   _buildHeader(),
                   const SizedBox(height: 32),
                   Expanded(
-                    child: step == 0 
-                      ? _buildCategoryList() 
-                      : step == 1 
-                        ? _buildDeptList() 
-                        : _buildSemList(),
+                    child: step == 0
+                        ? _buildCategoryList()
+                        : step == 1 && selectedCategory == 'Engineering'
+                            ? _buildDeptList()
+                            : step == 1 && selectedCategory == 'Intermediate (Inter)'
+                                ? _buildInterYearList()
+                                : _buildSemList(),
                   ),
                   const SizedBox(height: 16),
                   _buildActionBar(),
@@ -398,13 +415,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget _buildHeader() {
     String title = 'Personalize your\nlearning journey';
     String sub = 'Select your current education level to customize your path.';
-    
-    if (step == 1) {
+
+    if (step == 1 && selectedCategory == 'Engineering') {
       title = 'Select your\nDepartment';
       sub = 'Choose your engineering branch to get relevant subjects.';
+    } else if (step == 1 && selectedCategory == 'Intermediate (Inter)') {
+      title = 'Select your\nYear';
+      sub = 'Choose 1st Year (11th) or 2nd Year (12th).';
     } else if (step == 2) {
       title = 'Choose your\nSemester';
-      sub = 'Select your current semester for $selectedDept.';
+      sub = 'Select current semester for $selectedDept.';
     }
 
     return Column(
@@ -414,10 +434,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           child: Text(
             title,
             style: GoogleFonts.outfit(
-              fontSize: 32,
-              fontWeight: FontWeight.w800,
-              height: 1.2,
-              letterSpacing: -1,
+              fontSize: 32, fontWeight: FontWeight.w800,
+              height: 1.2, letterSpacing: -1,
             ),
           ),
         ),
@@ -465,6 +483,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           icon: LucideIcons.binary,
           isSelected: isSelected,
           onTap: () => setState(() => selectedDept = dept),
+        );
+      },
+    );
+  }
+
+  Widget _buildInterYearList() {
+    return ListView.builder(
+      itemCount: interYears.length,
+      itemBuilder: (context, index) {
+        final yr = interYears[index];
+        final isSelected = selectedDept == yr['title'];
+        return _buildSelectionItem(
+          index: index,
+          title: yr['title'],
+          subtitle: yr['subtitle'],
+          icon: yr['icon'],
+          isSelected: isSelected,
+          onTap: () => setState(() => selectedDept = yr['title']),
         );
       },
     );
@@ -573,11 +609,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     if (step == 1 && selectedDept != null) canGoNext = true;
     if (step == 2 && selectedSem != null) canGoNext = true;
 
+    // Decide button label
+    String btnLabel = 'Complete Setup';
+    if (step == 0 && (selectedCategory == 'Engineering' || selectedCategory == 'Intermediate (Inter)')) {
+      btnLabel = 'Next Step';
+    } else if (step == 1 && selectedCategory == 'Engineering') {
+      btnLabel = 'Next Step';
+    }
+
     return Row(
       children: [
         if (step > 0) ...[
           IconButton(
-            onPressed: () => setState(() => step--),
+            onPressed: () => setState(() { step--; if (step == 0) selectedDept = null; selectedSem = null; }),
             icon: const Icon(LucideIcons.arrowLeft, color: Colors.white70),
             padding: const EdgeInsets.all(16),
           ),
@@ -589,10 +633,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               onPressed: !canGoNext ? null : () {
                 if (step == 0 && selectedCategory == 'Engineering') {
                   setState(() => step = 1);
-                } else if (step == 1) {
+                } else if (step == 0 && selectedCategory == 'Intermediate (Inter)') {
+                  setState(() => step = 1);
+                } else if (step == 1 && selectedCategory == 'Engineering') {
                   setState(() => step = 2);
                 } else {
-                  // Finish onboarding
                   _showSubjectsPreview();
                 }
               },
@@ -604,12 +649,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                 elevation: 8,
               ),
-              child: Text(
-                (step == 0 && selectedCategory != 'Engineering') || step == 2 
-                  ? 'Complete Setup' 
-                  : 'Next Step',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
+              child: Text(btnLabel, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             ),
           ),
         ),
@@ -618,8 +658,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   void _showSubjectsPreview() {
-    final key = '${selectedDept}_$selectedSem';
-    final suggested = subjectsData[key] ?? subjectsData['default']!;
+    // Determine suggested subjects based on selection
+    List<String> suggested;
+    if (selectedCategory == 'Engineering') {
+      final key = '${selectedDept}_$selectedSem';
+      suggested = subjectsData[key] ?? subjectsData['default']!;
+    } else if (selectedCategory == 'Intermediate (Inter)') {
+      suggested = subjectsData[selectedDept ?? ''] ?? subjectsData['default']!;
+    } else {
+      suggested = subjectsData[selectedCategory ?? ''] ?? subjectsData['default']!;
+    }
 
     Navigator.pushReplacement(
       context,
