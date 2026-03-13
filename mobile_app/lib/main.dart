@@ -147,19 +147,7 @@ class _AuthScreenState extends State<AuthScreen> {
           children: [
             const AnimatedMeshBackground(),
             
-            // Grid Overlay
-            Opacity(
-              opacity: 0.05,
-              child: Container(
-                decoration: BoxDecoration(
-                  image: DecorationImage(
-                    image: const NetworkImage('https://www.transparenttextures.com/patterns/carbon-fibre.png'),
-                    repeat: ImageRepeat.repeat,
-                    colorFilter: ColorFilter.mode(Colors.white.withOpacity(0.2), BlendMode.srcIn),
-                  ),
-                ),
-              ),
-            ),
+                          // Grid removed - was causing network crash
 
             SafeArea(
               child: Center(
@@ -334,11 +322,12 @@ class OnboardingScreen extends StatefulWidget {
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
-  // Steps: 0=Category, 1=Dept(Engg)/Year(Inter), 2=Sem(Engg)
+  // Steps: 0=Category, 1=Dept(Engg)/Year(Inter), 2=University(Engg), 3=Sem(Engg)
   int step = 0;
   String? selectedCategory;
-  String? selectedDept;   // for Engg: dept name; for Inter: year name
-  String? selectedSem;    // for Engg: sem name
+  String? selectedDept;        // for Engg: branch; for Inter: year
+  String? selectedUniversity;  // Engg only
+  String? selectedSem;         // Engg only
 
   final List<Map<String, dynamic>> categories = [
     {'title': 'Class 1 to 5',            'subtitle': 'Foundational Learning',      'icon': LucideIcons.baby},
@@ -361,20 +350,32 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     {'title': '2nd Year (12th)', 'subtitle': 'Board Exam Preparation',   'icon': LucideIcons.award},
   ];
 
-  final Map<String, List<String>> subjectsData = {
-    // Engineering
-    'Computer Science (CSE)_Sem 3': ['Data Structures', 'Discrete Math', 'Digital Logic', 'OOPs with Java'],
-    'Computer Science (CSE)_Sem 4': ['Operating Systems', 'Design & Analysis of Algorithms', 'DBMS', 'Computer Org'],
-    'Electronics (ECE)_Sem 3':      ['Network Theory', 'Electronic Devices', 'Signals & Systems', 'Mathematics III'],
-    // Intermediate
-    '1st Year (11th)': ['Mathematics', 'Physics', 'Chemistry', 'English', 'Telugu / Hindi'],
-    '2nd Year (12th)': ['Mathematics', 'Physics', 'Chemistry', 'English', 'Telugu / Hindi', 'IPE Practicals'],
-    // School
-    'Class 1 to 5':  ['English', 'Mathematics', 'Environmental Science', 'Hindi / Telugu'],
-    'Class 6 to 10': ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'Social Studies', 'English', 'Hindi'],
-    // Default
+  // University-specific subject data: 'Univ_Branch_Sem' -> subjects
+  final Map<String, List<String>> universitySubjects = {
+    // VTU
+    'VTU_Computer Science (CSE)_Sem 1': ['Engineering Maths I', 'Engineering Physics', 'Engineering Chemistry', 'C Programming', 'Workshop'],
+    'VTU_Computer Science (CSE)_Sem 2': ['Engineering Maths II', 'Data Structures', 'Digital Logic', 'OOPs with Java', 'Environmental Science'],
+    'VTU_Computer Science (CSE)_Sem 3': ['Data Structures & Algorithms', 'Discrete Math', 'Digital Logic Design', 'OOPs with C++', 'Computer Organisation'],
+    'VTU_Computer Science (CSE)_Sem 4': ['Operating Systems', 'DBMS', 'Design & Analysis of Algorithms', 'Computer Networks', 'Microprocessors'],
+    'VTU_Computer Science (CSE)_Sem 5': ['Software Engineering', 'Web Technologies', 'Computer Graphics', 'Automata Theory', 'Elective I'],
+    'VTU_Computer Science (CSE)_Sem 6': ['Compiler Design', 'Artificial Intelligence', 'Cloud Computing', 'Machine Learning', 'Elective II'],
+    'VTU_Computer Science (CSE)_Sem 7': ['Big Data Analytics', 'Cyber Security', 'Soft Computing', 'Project Phase I', 'Elective III'],
+    'VTU_Computer Science (CSE)_Sem 8': ['Project Phase II', 'Seminar', 'Elective IV', 'Mobile Computing', 'Technical Writing'],
+    'VTU_Electronics (ECE)_Sem 3': ['Network Theory', 'Electronic Devices & Circuits', 'Signals & Systems', 'Engineering Maths III', 'Field Theory'],
+    'VTU_Electronics (ECE)_Sem 4': ['Analog Circuits', 'Digital Electronics', 'Microcontrollers', 'Control Systems', 'Communication Theory'],
+    // JNTU
+    'JNTU_Computer Science (CSE)_Sem 1': ['Engineering Maths I', 'Engineering Physics', 'C Programming', 'Environmental Studies', 'English'],
+    'JNTU_Computer Science (CSE)_Sem 2': ['Engineering Maths II', 'Data Structures', 'Digital Logic', 'OOPs with Java', 'Constitution of India'],
+    'JNTU_Computer Science (CSE)_Sem 3': ['Data Structures', 'Computer Organisation', 'OOPs with C++', 'Discrete Maths', 'Probability & Statistics'],
+    'JNTU_Computer Science (CSE)_Sem 4': ['Operating Systems', 'DBMS', 'Formal Languages', 'Computer Networks', 'Software Engineering'],
+    // Anna University
+    'Anna University_Computer Science (CSE)_Sem 1': ['Matrices & Calculus', 'Engineering Physics', 'Engineering Chemistry', 'C Programming', 'English'],
+    'Anna University_Computer Science (CSE)_Sem 3': ['Data Structures', 'Digital Principles', 'Computer Architecture', 'Discrete Maths', 'OOPs'],
+    'Anna University_Computer Science (CSE)_Sem 4': ['DBMS', 'Operating Systems', 'Computer Networks', 'Theory of Computation', 'Microprocessors'],
+    // Default fallback
     'default': ['Mathematics', 'Physics', 'Chemistry', 'English', 'Coding'],
   };
+
 
   @override
   Widget build(BuildContext context) {
@@ -398,7 +399,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             ? _buildDeptList()
                             : step == 1 && selectedCategory == 'Intermediate (Inter)'
                                 ? _buildInterYearList()
-                                : _buildSemList(),
+                                : step == 2 && selectedCategory == 'Engineering'
+                                    ? _buildUniversitySearch()
+                                    : _buildSemList(),
                   ),
                   const SizedBox(height: 16),
                   _buildActionBar(),
@@ -422,9 +425,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     } else if (step == 1 && selectedCategory == 'Intermediate (Inter)') {
       title = 'Select your\nYear';
       sub = 'Choose 1st Year (11th) or 2nd Year (12th).';
-    } else if (step == 2) {
+    } else if (step == 2 && selectedCategory == 'Engineering') {
+      title = 'Your University';
+      sub = 'Search your college/university to get accurate syllabus.';
+    } else if (step == 3) {
       title = 'Choose your\nSemester';
-      sub = 'Select current semester for $selectedDept.';
+      sub = 'Select current semester — ${selectedUniversity ?? ''} • $selectedDept.';
     }
 
     return Column(
@@ -509,10 +515,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget _buildSemList() {
     return GridView.builder(
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-        childAspectRatio: 1.5,
+        crossAxisCount: 2, crossAxisSpacing: 16, mainAxisSpacing: 16, childAspectRatio: 1.5,
       ),
       itemCount: 8,
       itemBuilder: (context, index) {
@@ -523,26 +526,73 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           child: Container(
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: isSelected 
-                ? Theme.of(context).colorScheme.primary.withOpacity(0.2)
-                : const Color(0xFF0F172A).withOpacity(0.8),
+              color: isSelected
+                  ? Theme.of(context).colorScheme.primary.withOpacity(0.2)
+                  : const Color(0xFF0F172A).withOpacity(0.8),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
                 color: isSelected ? Theme.of(context).colorScheme.primary : Colors.white10,
                 width: 2,
               ),
             ),
-            child: Text(
-              sem,
-              style: TextStyle(
-                fontSize: 18, 
-                fontWeight: FontWeight.bold,
-                color: isSelected ? Colors.white : Colors.white70,
-              ),
-            ),
+            child: Text(sem,
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: isSelected ? Colors.white : Colors.white70)),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildUniversitySearch() {
+    final universities = [
+      'VTU', 'JNTU', 'Anna University', 'GTU', 'RGPV', 'Mumbai University',
+      'Pune University', 'Osmania University', 'Bangalore University', 'Calicut University',
+      'Kerala University', 'Madras University', 'Andhra University', 'PTU', 'KTU', 'Other'
+    ];
+    return Column(
+      children: [
+        TextField(
+          style: const TextStyle(fontSize: 15),
+          onChanged: (q) => setState(() => selectedUniversity = q.isEmpty ? null : selectedUniversity),
+          decoration: InputDecoration(
+            hintText: 'Search university (e.g. VTU, JNTU…)',
+            hintStyle: const TextStyle(color: Colors.white24),
+            prefixIcon: const Icon(LucideIcons.search, size: 20, color: Color(0xFF6366F1)),
+            filled: true,
+            fillColor: const Color(0xFF0F172A),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(20),
+              borderSide: BorderSide(color: Colors.white.withOpacity(0.08)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(20),
+              borderSide: const BorderSide(color: Color(0xFF6366F1), width: 2),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Expanded(
+          child: ListView.builder(
+            itemCount: universities.length,
+            itemBuilder: (context, idx) {
+              final u = universities[idx];
+              final isSelected = selectedUniversity == u;
+              return _buildSelectionItem(
+                index: idx,
+                title: u,
+                subtitle: 'Affiliated University',
+                icon: LucideIcons.building2,
+                isSelected: isSelected,
+                onTap: () => setState(() => selectedUniversity = u),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -607,21 +657,26 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     bool canGoNext = false;
     if (step == 0 && selectedCategory != null) canGoNext = true;
     if (step == 1 && selectedDept != null) canGoNext = true;
-    if (step == 2 && selectedSem != null) canGoNext = true;
+    if (step == 2 && selectedCategory == 'Engineering' && selectedUniversity != null) canGoNext = true;
+    if (step == 3 && selectedSem != null) canGoNext = true;
+    // non-Engineering step 2 (sem) handled via _buildSemList – repurposed check:
+    if (step == 2 && selectedCategory != 'Engineering' && selectedSem != null) canGoNext = true;
 
-    // Decide button label
     String btnLabel = 'Complete Setup';
-    if (step == 0 && (selectedCategory == 'Engineering' || selectedCategory == 'Intermediate (Inter)')) {
-      btnLabel = 'Next Step';
-    } else if (step == 1 && selectedCategory == 'Engineering') {
-      btnLabel = 'Next Step';
-    }
+    if (step == 0 && (selectedCategory == 'Engineering' || selectedCategory == 'Intermediate (Inter)')) btnLabel = 'Next Step';
+    if (step == 1 && selectedCategory == 'Engineering') btnLabel = 'Next Step';
+    if (step == 2 && selectedCategory == 'Engineering') btnLabel = 'Next Step';
 
     return Row(
       children: [
         if (step > 0) ...[
           IconButton(
-            onPressed: () => setState(() { step--; if (step == 0) selectedDept = null; selectedSem = null; }),
+            onPressed: () => setState(() {
+              step--;
+              if (step == 0) { selectedDept = null; selectedUniversity = null; selectedSem = null; }
+              if (step == 1) { selectedUniversity = null; selectedSem = null; }
+              if (step == 2) { selectedSem = null; }
+            }),
             icon: const Icon(LucideIcons.arrowLeft, color: Colors.white70),
             padding: const EdgeInsets.all(16),
           ),
@@ -631,12 +686,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           child: FadeInUp(
             child: ElevatedButton(
               onPressed: !canGoNext ? null : () {
-                if (step == 0 && selectedCategory == 'Engineering') {
-                  setState(() => step = 1);
-                } else if (step == 0 && selectedCategory == 'Intermediate (Inter)') {
+                if (step == 0 && (selectedCategory == 'Engineering' || selectedCategory == 'Intermediate (Inter)')) {
                   setState(() => step = 1);
                 } else if (step == 1 && selectedCategory == 'Engineering') {
-                  setState(() => step = 2);
+                  setState(() => step = 2); // go to university
+                } else if (step == 2 && selectedCategory == 'Engineering') {
+                  setState(() => step = 3); // go to semester
                 } else {
                   _showSubjectsPreview();
                 }
@@ -658,11 +713,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   void _showSubjectsPreview() {
-    // Determine suggested subjects based on selection
+    final Map<String, List<String>> subjectsData = {
+      '1st Year (11th)': ['Mathematics', 'Physics', 'Chemistry', 'English', 'Telugu / Hindi'],
+      '2nd Year (12th)': ['Mathematics', 'Physics', 'Chemistry', 'English', 'Telugu / Hindi', 'IPE Practicals'],
+      'Class 1 to 5':  ['English', 'Mathematics', 'Environmental Science', 'Hindi / Telugu'],
+      'Class 6 to 10': ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'Social Studies', 'English', 'Hindi'],
+      'default': ['Mathematics', 'Physics', 'Chemistry', 'English', 'Coding'],
+    };
+
     List<String> suggested;
     if (selectedCategory == 'Engineering') {
-      final key = '${selectedDept}_$selectedSem';
-      suggested = subjectsData[key] ?? subjectsData['default']!;
+      final uniKey = '${selectedUniversity}_${selectedDept}_$selectedSem';
+      suggested = universitySubjects[uniKey] ?? universitySubjects['default']!;
     } else if (selectedCategory == 'Intermediate (Inter)') {
       suggested = subjectsData[selectedDept ?? ''] ?? subjectsData['default']!;
     } else {
@@ -677,6 +739,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           category: selectedCategory ?? '',
           dept: selectedDept,
           sem: selectedSem,
+          university: selectedUniversity,
         ),
       ),
     );
@@ -692,6 +755,7 @@ class SubjectPickerScreen extends StatefulWidget {
   final String category;
   final String? dept;
   final String? sem;
+  final String? university;
 
   const SubjectPickerScreen({
     super.key,
@@ -699,6 +763,7 @@ class SubjectPickerScreen extends StatefulWidget {
     required this.category,
     this.dept,
     this.sem,
+    this.university,
   });
 
   @override
@@ -789,9 +854,11 @@ class _SubjectPickerScreenState extends State<SubjectPickerScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        widget.sem != null
-                            ? 'Customise subjects for ${widget.sem} • ${widget.dept}'
-                            : 'Search and add subjects for your class',
+                        widget.university != null
+                            ? '${widget.university} • ${widget.sem} • ${widget.dept}'
+                            : widget.sem != null
+                                ? 'Customise subjects for ${widget.sem} • ${widget.dept}'
+                                : 'Search and add subjects for your class',
                         style: const TextStyle(color: Colors.white54, fontSize: 14),
                       ),
                     ],
