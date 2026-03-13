@@ -619,66 +619,286 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   void _showSubjectsPreview() {
     final key = '${selectedDept}_$selectedSem';
-    final subjects = subjectsData[key] ?? subjectsData['default']!;
+    final suggested = subjectsData[key] ?? subjectsData['default']!;
 
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF0F172A),
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Personalized Subjects', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Text('We have matched these subjects for $selectedSem ($selectedDept)', style: const TextStyle(color: Colors.white54)),
-            const SizedBox(height: 32),
-            ...subjects.map((s) => Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Row(
-                children: [
-                  const Icon(LucideIcons.checkCircle, color: Color(0xFF2DD4BF), size: 18),
-                  const SizedBox(width: 16),
-                  Text(s, style: const TextStyle(fontWeight: FontWeight.w600)),
-                ],
-              ),
-            )),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => DashboardScreen(
-                        category: selectedCategory ?? 'Engineering',
-                        subjects: subjects,
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SubjectPickerScreen(
+          suggested: suggested,
+          category: selectedCategory ?? '',
+          dept: selectedDept,
+          sem: selectedSem,
+        ),
+      ),
+    );
+  }
+}
+
+// ──────────────────────────────────────────────
+// Subject Picker Screen
+// ──────────────────────────────────────────────
+
+class SubjectPickerScreen extends StatefulWidget {
+  final List<String> suggested;
+  final String category;
+  final String? dept;
+  final String? sem;
+
+  const SubjectPickerScreen({
+    super.key,
+    required this.suggested,
+    required this.category,
+    this.dept,
+    this.sem,
+  });
+
+  @override
+  State<SubjectPickerScreen> createState() => _SubjectPickerScreenState();
+}
+
+class _SubjectPickerScreenState extends State<SubjectPickerScreen> {
+  late List<String> _added;
+  final TextEditingController _searchCtrl = TextEditingController();
+  String _query = '';
+
+  // Big master list of subjects to search from
+  final List<String> _allSubjects = [
+    // School
+    'Mathematics', 'Physics', 'Chemistry', 'Biology', 'English',
+    'Social Studies', 'History', 'Geography', 'Civics', 'Economics',
+    'Hindi', 'Kannada', 'Sanskrit', 'Computer Science', 'Coding',
+    // Engineering - CSE/IT
+    'Data Structures', 'Algorithms', 'Operating Systems', 'DBMS',
+    'Computer Networks', 'Software Engineering', 'OOPs with Java',
+    'OOPs with C++', 'Python Programming', 'Web Technologies',
+    'Discrete Mathematics', 'Digital Logic Design', 'Computer Organisation',
+    'Machine Learning', 'Artificial Intelligence', 'Cloud Computing',
+    'Big Data Analytics', 'Cyber Security', 'Mobile Computing',
+    // Engineering - ECE
+    'Electronic Devices', 'Signals & Systems', 'Network Theory',
+    'Electromagnetic Theory', 'Digital Signal Processing', 'VLSI Design',
+    'Microprocessors', 'Communication Systems', 'Control Systems',
+    // Engineering - ME/CE
+    'Engineering Mechanics', 'Thermodynamics', 'Fluid Mechanics',
+    'Strength of Materials', 'Manufacturing Processes', 'Machine Design',
+    // Common Engineering
+    'Engineering Mathematics', 'Engineering Physics', 'Engineering Chemistry',
+    'Environmental Science', 'Constitution of India', 'Professional Ethics',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _added = List<String>.from(widget.suggested);
+    _searchCtrl.addListener(() => setState(() => _query = _searchCtrl.text.trim()));
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  List<String> get _filtered {
+    if (_query.isEmpty) return [];
+    return _allSubjects
+        .where((s) => s.toLowerCase().contains(_query.toLowerCase()) && !_added.contains(s))
+        .toList();
+  }
+
+  void _add(String subject) {
+    if (!_added.contains(subject)) {
+      setState(() {
+        _added.add(subject);
+        _searchCtrl.clear();
+      });
+    }
+  }
+
+  void _remove(String subject) => setState(() => _added.remove(subject));
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF020617),
+      body: Stack(
+        children: [
+          const AnimatedMeshBackground(),
+          SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Header
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 32, 24, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Add Your Subjects',
+                        style: GoogleFonts.outfit(fontSize: 30, fontWeight: FontWeight.w800, letterSpacing: -1),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        widget.sem != null
+                            ? 'Customise subjects for ${widget.sem} • ${widget.dept}'
+                            : 'Search and add subjects for your class',
+                        style: const TextStyle(color: Colors.white54, fontSize: 14),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Search Bar
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: TextField(
+                    controller: _searchCtrl,
+                    style: const TextStyle(fontSize: 15),
+                    decoration: InputDecoration(
+                      hintText: 'Search subjects (e.g. Data Structures)…',
+                      hintStyle: const TextStyle(color: Colors.white24, fontSize: 14),
+                      prefixIcon: const Icon(LucideIcons.search, size: 20, color: Color(0xFF6366F1)),
+                      suffixIcon: _query.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(LucideIcons.x, size: 16, color: Colors.white38),
+                              onPressed: () => _searchCtrl.clear(),
+                            )
+                          : null,
+                      filled: true,
+                      fillColor: const Color(0xFF0F172A),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        borderSide: BorderSide(color: Colors.white.withOpacity(0.08)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        borderSide: const BorderSide(color: Color(0xFF6366F1), width: 2),
                       ),
                     ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
                 ),
-                child: const Text('Start Studying', style: TextStyle(fontWeight: FontWeight.bold)),
-              ),
+
+                const SizedBox(height: 8),
+
+                // Search Results Dropdown
+                if (_filtered.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Container(
+                      constraints: const BoxConstraints(maxHeight: 200),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E293B),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.white.withOpacity(0.08)),
+                      ),
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        padding: EdgeInsets.zero,
+                        itemCount: _filtered.length,
+                        itemBuilder: (context, idx) {
+                          final sub = _filtered[idx];
+                          return ListTile(
+                            title: Text(sub, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                            trailing: const Icon(LucideIcons.plus, color: Color(0xFF6366F1), size: 18),
+                            onTap: () => _add(sub),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+
+                const SizedBox(height: 16),
+
+                // Added chips label
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Your Subjects (${_added.length})',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                      Text('Tap ✕ to remove', style: TextStyle(color: Colors.white38, fontSize: 12)),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Added subjects list
+                Expanded(
+                  child: _added.isEmpty
+                      ? const Center(
+                          child: Text('No subjects added yet.\nSearch above to add!',
+                              textAlign: TextAlign.center, style: TextStyle(color: Colors.white38)),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          itemCount: _added.length,
+                          itemBuilder: (context, idx) {
+                            final sub = _added[idx];
+                            return FadeInLeft(
+                              delay: Duration(milliseconds: 60 * idx),
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF0F172A),
+                                  borderRadius: BorderRadius.circular(18),
+                                  border: Border.all(color: Colors.white.withOpacity(0.06)),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(LucideIcons.checkCircle, color: Color(0xFF2DD4BF), size: 20),
+                                    const SizedBox(width: 16),
+                                    Expanded(child: Text(sub, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15))),
+                                    GestureDetector(
+                                      onTap: () => _remove(sub),
+                                      child: const Icon(LucideIcons.x, color: Colors.white38, size: 18),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+
+                // Continue Button
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+                  child: ElevatedButton(
+                    onPressed: _added.isEmpty ? null : () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => DashboardScreen(
+                            category: widget.category,
+                            subjects: _added,
+                          ),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF6366F1),
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: Colors.white10,
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                      elevation: 8,
+                    ),
+                    child: const Text('Continue to Dashboard', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
