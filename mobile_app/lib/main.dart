@@ -660,7 +660,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   Navigator.pop(context);
                   Navigator.pushReplacement(
                     context,
-                    MaterialPageRoute(builder: (context) => const DashboardScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => DashboardScreen(
+                        category: selectedCategory ?? 'Engineering',
+                        subjects: subjects,
+                      ),
+                    ),
                   );
                 },
                 style: ElevatedButton.styleFrom(
@@ -722,7 +727,10 @@ class _InputField extends StatelessWidget {
 // --- Dashboard (Premium Mobile View) ---
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+  final String category;
+  final List<String> subjects;
+
+  const DashboardScreen({super.key, required this.category, required this.subjects});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -736,7 +744,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF020617),
       bottomNavigationBar: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
           color: const Color(0xFF0F172A),
           border: Border(top: BorderSide(color: Colors.white.withOpacity(0.05))),
@@ -748,24 +756,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
           elevation: 0,
           selectedItemColor: Theme.of(context).colorScheme.primary,
           unselectedItemColor: Colors.white38,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
-          unselectedLabelStyle: const TextStyle(fontSize: 11),
+          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 10),
+          unselectedLabelStyle: const TextStyle(fontSize: 10),
           type: BottomNavigationBarType.fixed,
           items: const [
-            BottomNavigationBarItem(icon: Icon(LucideIcons.layoutDashboard, size: 22), label: 'Home'),
-            BottomNavigationBarItem(icon: Icon(LucideIcons.bookOpen, size: 22), label: 'Study'),
-            BottomNavigationBarItem(icon: Icon(LucideIcons.bot, size: 22), label: 'AI Coach'),
-            BottomNavigationBarItem(icon: Icon(LucideIcons.user, size: 22), label: 'Profile'),
+            BottomNavigationBarItem(icon: Icon(LucideIcons.layoutDashboard, size: 20), label: 'HOME'),
+            BottomNavigationBarItem(icon: Icon(LucideIcons.timer, size: 20), label: 'TIMER'),
+            BottomNavigationBarItem(icon: Icon(LucideIcons.graduationCap, size: 20), label: 'QUIZ'),
+            BottomNavigationBarItem(icon: Icon(LucideIcons.barChart2, size: 20), label: 'REPORTS'),
           ],
         ),
       ),
       body: IndexedStack(
         index: _currentIndex,
-        children: const [
-          HomeTab(),
-          Center(child: Text('Courses Screen')),
-          AICoachTab(),
-          Center(child: Text('Profile Screen')),
+        children: [
+          HomeTab(category: widget.category, subjects: widget.subjects),
+          const Center(child: Text('Focus Timer')),
+          const Center(child: Text('AI Quiz Mode')),
+          const Center(child: Text('Detailed Reports')),
         ],
       ),
     );
@@ -773,154 +781,245 @@ class _DashboardScreenState extends State<DashboardScreen> {
 }
 
 class HomeTab extends StatelessWidget {
-  const HomeTab({super.key});
+  final String category;
+  final List<String> subjects;
+
+  const HomeTab({super.key, required this.category, required this.subjects});
 
   @override
   Widget build(BuildContext context) {
     return CustomScrollView(
       slivers: [
         SliverAppBar(
-          expandedHeight: 160,
+          expandedHeight: 120,
           pinned: true,
-          stretch: true,
           backgroundColor: const Color(0xFF020617),
           flexibleSpace: FlexibleSpaceBar(
-            titlePadding: const EdgeInsets.only(left: 24, bottom: 20),
-            title: Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Welcome back,', style: TextStyle(fontSize: 12, color: Colors.white54)),
-                Text('Hemanth B', style: GoogleFonts.outfit(fontWeight: FontWeight.w800, fontSize: 24)),
-              ],
-            ),
+            titlePadding: const EdgeInsets.only(left: 24, bottom: 16),
+            title: Text('Dashboard', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18)),
           ),
           actions: [
             Padding(
               padding: const EdgeInsets.only(right: 20),
               child: CircleAvatar(
                 backgroundColor: Colors.white.withOpacity(0.05),
-                child: IconButton(onPressed: () {}, icon: const Icon(LucideIcons.bell, size: 20, color: Colors.white)),
+                child: IconButton(onPressed: () {}, icon: const Icon(LucideIcons.bell, size: 18, color: Colors.white)),
               ),
             )
           ],
         ),
         
         SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
           sliver: SliverList(
             delegate: SliverChildListDelegate([
-              // Progress Card
-              FadeInUp(
-                delay: const Duration(milliseconds: 200),
-                child: Container(
-                  padding: const EdgeInsets.all(28),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF6366F1), Color(0xFF818CF8)],
-                      begin: Alignment.topLeft, end: Alignment.bottomRight,
+              // Top Stats Grid
+              Row(
+                children: [
+                  Expanded(child: _MiniStat(icon: LucideIcons.timer, value: '0h 0m', label: 'Today', color: Colors.blue)),
+                  const SizedBox(width: 12),
+                  Expanded(child: _MiniStat(icon: LucideIcons.flame, value: '0 days', label: 'Streak', color: Colors.orange)),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(child: _MiniStat(icon: LucideIcons.target, value: '0%', label: 'Goal', color: Colors.green)),
+                  const SizedBox(width: 12),
+                  Expanded(child: _MiniStat(icon: LucideIcons.book, value: '${subjects.length}', label: 'Subjects', color: Colors.purple)),
+                ],
+              ),
+
+              const SizedBox(height: 24),
+
+              // Daily Study Goal
+              _SectionHeader(title: 'Daily Study Goal', subtitle: '0 of 120 minutes completed'),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0F172A),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Column(
+                  children: [
+                    LinearPercentIndicator(
+                      lineHeight: 6.0,
+                      percent: 0.05,
+                      padding: EdgeInsets.zero,
+                      backgroundColor: Colors.white.withOpacity(0.05),
+                      progressColor: Theme.of(context).colorScheme.primary,
+                      barRadius: const Radius.circular(10),
                     ),
-                    borderRadius: BorderRadius.circular(32),
-                    boxShadow: [
-                      BoxShadow(color: const Color(0xFF6366F1).withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 10))
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Daily Goal', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
-                              Text('3 of 4 sessions done', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                            ],
-                          ),
-                          CircularPercentIndicator(
-                            radius: 35,
-                            lineWidth: 8,
-                            percent: 0.75,
-                            center: const Text('75%', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                            progressColor: Colors.white,
-                            backgroundColor: Colors.white24,
-                            circularStrokeCap: CircularStrokeCap.round,
-                          )
-                        ],
-                      ),
-                    ],
-                  ),
+                    const SizedBox(height: 10),
+                    const Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('0 min', style: TextStyle(color: Colors.white38, fontSize: 12)),
+                        Text('120 min', style: TextStyle(color: Colors.white38, fontSize: 12)),
+                      ],
+                    ),
+                  ],
                 ),
               ),
 
               const SizedBox(height: 32),
-              const Text('Active Statistics', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-              
+
+              // Subject Strength (Dynamic based on onboarding)
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(child: _StatBox(label: 'Focus', value: '4.5h', icon: LucideIcons.timer, color: Colors.blueAccent)),
-                  const SizedBox(width: 16),
-                  Expanded(child: _StatBox(label: 'Streak', value: '12d', icon: LucideIcons.flame, color: Colors.orangeAccent)),
+                  const Text('Subject Strength', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  TextButton(onPressed: () {}, child: const Text('Take Quiz >', style: TextStyle(fontSize: 12))),
                 ],
               ),
+              const SizedBox(height: 4),
+              const Text('Based on your quiz performance', style: TextStyle(color: Colors.white38, fontSize: 13)),
+              const SizedBox(height: 16),
+              ...subjects.map((sub) => _SubjectStrengthRow(title: sub)),
 
               const SizedBox(height: 32),
-              _AICoachBanner(context),
-              const SizedBox(height: 48),
+
+              // Advanced Study Toolkit
+              const Text('Advanced Study Toolkit', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: 2,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 1.6,
+                children: [
+                  _ToolCard(icon: LucideIcons.brainCircuit, label: 'DOUBT SOLVER', color: Colors.indigo),
+                  _ToolCard(icon: LucideIcons.layers, label: 'FLASHCARDS', color: Colors.orange),
+                  _ToolCard(icon: LucideIcons.map, label: 'GUIDANCE', color: Colors.green),
+                  _ToolCard(icon: LucideIcons.database, label: 'RESOURCES', color: Colors.blue),
+                ],
+              ),
+              
+              const SizedBox(height: 40),
             ]),
           ),
         )
       ],
     );
   }
+}
 
-  Widget _StatBox({required String label, required String value, required IconData icon, required Color color}) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0F172A),
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 16),
-          Text(value, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
-          Text(label, style: const TextStyle(color: Colors.white38, fontSize: 14)),
-        ],
-      ),
+class _SectionHeader extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  const _SectionHeader({required this.title, required this.subtitle});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        Text(subtitle, style: const TextStyle(color: Colors.white38, fontSize: 13)),
+      ],
     );
   }
+}
 
-  Widget _AICoachBanner(BuildContext context) {
+class _MiniStat extends StatelessWidget {
+  final IconData icon;
+  final String value;
+  final String label;
+  final Color color;
+
+  const _MiniStat({required this.icon, required this.value, required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
-        borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        color: const Color(0xFF0F172A),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.03)),
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: const Color(0xFF2DD4BF).withOpacity(0.1), shape: BoxShape.circle),
-            child: const Icon(LucideIcons.sparkles, color: Color(0xFF2DD4BF), size: 24),
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
+            child: Icon(icon, color: color, size: 16),
           ),
-          const SizedBox(width: 20),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('AI Study Assistant', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
-                Text('Instant doubt solving', style: TextStyle(color: Colors.white38, fontSize: 13)),
-              ],
-            ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+              Text(label, style: const TextStyle(color: Colors.white38, fontSize: 11)),
+            ],
           ),
-          const Icon(LucideIcons.chevronRight, color: Colors.white24),
+        ],
+      ),
+    );
+  }
+}
+
+class _SubjectStrengthRow extends StatelessWidget {
+  final String title;
+  const _SubjectStrengthRow({required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              const Text('0% - Weak', style: TextStyle(color: Colors.redAccent, fontSize: 11)),
+            ],
+          ),
+          const SizedBox(height: 10),
+          LinearPercentIndicator(
+            lineHeight: 4.0,
+            percent: 0.05,
+            padding: EdgeInsets.zero,
+            backgroundColor: Colors.white.withOpacity(0.05),
+            progressColor: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+            barRadius: const Radius.circular(10),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ToolCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  const _ToolCard({required this.icon, required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F172A),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withOpacity(0.03)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(height: 12),
+          Text(label, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
         ],
       ),
     );
