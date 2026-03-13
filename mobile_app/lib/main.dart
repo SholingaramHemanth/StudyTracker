@@ -1183,7 +1183,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           type: BottomNavigationBarType.fixed,
           items: const [
             BottomNavigationBarItem(icon: Icon(LucideIcons.layoutDashboard, size: 20), label: 'HOME'),
-            BottomNavigationBarItem(icon: Icon(LucideIcons.timer, size: 20), label: 'TIMER'),
+            BottomNavigationBarItem(icon: Icon(LucideIcons.calendarDays, size: 20), label: 'PLANNER'),
             BottomNavigationBarItem(icon: Icon(LucideIcons.graduationCap, size: 20), label: 'QUIZ'),
             BottomNavigationBarItem(icon: Icon(LucideIcons.barChart2, size: 20), label: 'REPORTS'),
           ],
@@ -1193,7 +1193,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         index: _currentIndex,
         children: [
           HomeTab(category: widget.category, subjects: widget.subjects),
-          const Center(child: Text('Focus Timer')),
+          const StudyPlannerTab(),
           const Center(child: Text('AI Quiz Mode')),
           const Center(child: Text('Detailed Reports')),
         ],
@@ -1531,6 +1531,560 @@ class _ChatBubble extends StatelessWidget {
           ],
         ),
         child: Text(text, style: const TextStyle(fontSize: 15, height: 1.4)),
+      ),
+    );
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Study Planner Tab  (mirrors web Study Planner exactly)
+// ──────────────────────────────────────────────────────────────────────────────
+
+class StudyPlannerTab extends StatefulWidget {
+  const StudyPlannerTab({super.key});
+
+  @override
+  State<StudyPlannerTab> createState() => _StudyPlannerTabState();
+}
+
+class _StudyPlannerTabState extends State<StudyPlannerTab>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabCtrl;
+
+  // Setup form state
+  final _subjectCtrl = TextEditingController();
+  DateTime? _examDate;
+  double _difficulty = 5;
+  double _studyHours = 4;
+  double _breakLength = 15;
+  String _studyTime = 'Morning';
+
+  // Added subjects
+  final List<Map<String, dynamic>> _planSubjects = [];
+
+  bool _generated = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabCtrl = TabController(length: 3, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabCtrl.dispose();
+    _subjectCtrl.dispose();
+    super.dispose();
+  }
+
+  void _addSubject() {
+    if (_subjectCtrl.text.trim().isEmpty || _examDate == null) return;
+    setState(() {
+      _planSubjects.add({
+        'name': _subjectCtrl.text.trim(),
+        'date': _examDate!,
+        'difficulty': _difficulty,
+      });
+      _subjectCtrl.clear();
+      _examDate = null;
+      _difficulty = 5;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF020617),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // ── Header ──────────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text('Study Planner',
+                          style: GoogleFonts.outfit(
+                              fontSize: 26, fontWeight: FontWeight.w800)),
+                      const SizedBox(width: 10),
+                      const Text('📅', style: TextStyle(fontSize: 22)),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'AI-powered study timetable generator based on your exams and schedule.',
+                    style: TextStyle(color: Colors.white54, fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // ── Tabs ─────────────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0F172A),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: TabBar(
+                  controller: _tabCtrl,
+                  padding: const EdgeInsets.all(4),
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  indicator: BoxDecoration(
+                    color: const Color(0xFF6366F1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  labelColor: Colors.white,
+                  unselectedLabelColor: Colors.white38,
+                  labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  dividerColor: Colors.transparent,
+                  tabs: const [
+                    Tab(text: 'Setup'),
+                    Tab(text: 'Timetable'),
+                    Tab(text: 'Progress'),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // ── Tab Views ────────────────────────────────────────────────
+            Expanded(
+              child: TabBarView(
+                controller: _tabCtrl,
+                children: [
+                  _buildSetupTab(),
+                  _buildTimetableTab(),
+                  _buildProgressTab(),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Setup Tab ─────────────────────────────────────────────────────────────
+  Widget _buildSetupTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Add Subjects Card
+          _PlannerCard(
+            title: 'Add Subjects',
+            subtitle: 'Enter the subjects you need to study for.',
+            child: Column(
+              children: [
+                // Subject Name
+                TextField(
+                  controller: _subjectCtrl,
+                  style: const TextStyle(fontSize: 14),
+                  decoration: InputDecoration(
+                    labelText: 'Subject Name',
+                    hintText: 'e.g. Mathematics',
+                    hintStyle: const TextStyle(color: Colors.white24, fontSize: 13),
+                    labelStyle: const TextStyle(color: Colors.white54, fontSize: 13),
+                    filled: true,
+                    fillColor: Colors.white.withOpacity(0.04),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(color: Colors.white.withOpacity(0.08)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: Color(0xFF6366F1), width: 2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // Exam Date
+                GestureDetector(
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: DateTime.now().add(const Duration(days: 7)),
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                      builder: (ctx, child) => Theme(
+                        data: Theme.of(ctx).copyWith(
+                          colorScheme: const ColorScheme.dark(primary: Color(0xFF6366F1)),
+                        ),
+                        child: child!,
+                      ),
+                    );
+                    if (picked != null) setState(() => _examDate = picked);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.04),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.white.withOpacity(0.08)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(LucideIcons.calendar, size: 16, color: Color(0xFF6366F1)),
+                        const SizedBox(width: 12),
+                        Text(
+                          _examDate == null
+                              ? 'Exam Date (tap to pick)'
+                              : 'Exam: ${_examDate!.day}/${_examDate!.month}/${_examDate!.year}',
+                          style: TextStyle(
+                            color: _examDate == null ? Colors.white24 : Colors.white70,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Difficulty slider
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Difficulty Level', style: TextStyle(fontSize: 13, color: Colors.white70)),
+                    Text('${_difficulty.toInt()}/10',
+                        style: const TextStyle(color: Color(0xFF6366F1), fontWeight: FontWeight.bold, fontSize: 13)),
+                  ],
+                ),
+                Slider(
+                  value: _difficulty,
+                  min: 1,
+                  max: 10,
+                  divisions: 9,
+                  activeColor: const Color(0xFF6366F1),
+                  inactiveColor: Colors.white10,
+                  onChanged: (v) => setState(() => _difficulty = v),
+                ),
+                const SizedBox(height: 12),
+
+                // Added subjects list
+                if (_planSubjects.isNotEmpty) ...[
+                  const Divider(color: Colors.white10),
+                  const SizedBox(height: 8),
+                  ..._planSubjects.map((s) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: [
+                        const Icon(LucideIcons.checkCircle, color: Color(0xFF2DD4BF), size: 16),
+                        const SizedBox(width: 10),
+                        Expanded(child: Text(s['name'], style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500))),
+                        Text(
+                          '${(s['date'] as DateTime).day}/${(s['date'] as DateTime).month}',
+                          style: const TextStyle(color: Colors.white38, fontSize: 11),
+                        ),
+                        const SizedBox(width: 10),
+                        GestureDetector(
+                          onTap: () => setState(() => _planSubjects.remove(s)),
+                          child: const Icon(LucideIcons.x, size: 14, color: Colors.white38),
+                        ),
+                      ],
+                    ),
+                  )),
+                  const SizedBox(height: 8),
+                ],
+
+                // Add Subject button
+                ElevatedButton.icon(
+                  onPressed: _addSubject,
+                  icon: const Icon(LucideIcons.plus, size: 16),
+                  label: const Text('Add Subject'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF6366F1),
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(double.infinity, 48),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Study Preferences Card
+          _PlannerCard(
+            title: 'Study Preferences',
+            subtitle: 'Tell us how you prefer to study.',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Study Hours
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Available Study Hours / Day', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                        Text('How much time can you dedicate daily?', style: TextStyle(color: Colors.white38, fontSize: 11)),
+                      ],
+                    ),
+                    Text('${_studyHours.toInt()}h',
+                        style: const TextStyle(color: Color(0xFF6366F1), fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                Slider(
+                  value: _studyHours,
+                  min: 1,
+                  max: 12,
+                  divisions: 11,
+                  activeColor: const Color(0xFF6366F1),
+                  inactiveColor: Colors.white10,
+                  onChanged: (v) => setState(() => _studyHours = v),
+                ),
+
+                const SizedBox(height: 12),
+                const Text('Preferred Study Time', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 10),
+
+                // Time selector
+                Row(
+                  children: ['Morning', 'Afternoon', 'Evening', 'Night'].map((t) {
+                    final icons = {
+                      'Morning': LucideIcons.sunrise,
+                      'Afternoon': LucideIcons.sun,
+                      'Evening': LucideIcons.sunset,
+                      'Night': LucideIcons.moon,
+                    };
+                    final isSelected = _studyTime == t;
+                    return Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => _studyTime = t),
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 6),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: isSelected ? const Color(0xFF6366F1).withOpacity(0.2) : Colors.white.withOpacity(0.04),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isSelected ? const Color(0xFF6366F1) : Colors.white.withOpacity(0.06),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Column(
+                            children: [
+                              Icon(icons[t]!, size: 16, color: isSelected ? const Color(0xFF6366F1) : Colors.white38),
+                              const SizedBox(height: 4),
+                              Text(t, style: TextStyle(fontSize: 9, color: isSelected ? Colors.white : Colors.white38, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Break Length
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Break Length', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                        Text('After every 45 min focus session.', style: TextStyle(color: Colors.white38, fontSize: 11)),
+                      ],
+                    ),
+                    Text('${_breakLength.toInt()}m',
+                        style: const TextStyle(color: Color(0xFF6366F1), fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                Slider(
+                  value: _breakLength,
+                  min: 5,
+                  max: 30,
+                  divisions: 5,
+                  activeColor: const Color(0xFF6366F1),
+                  inactiveColor: Colors.white10,
+                  onChanged: (v) => setState(() => _breakLength = v),
+                ),
+
+                const SizedBox(height: 12),
+
+                // Generate button
+                ElevatedButton.icon(
+                  onPressed: _planSubjects.isEmpty ? null : () {
+                    setState(() => _generated = true);
+                    _tabCtrl.animateTo(1);
+                  },
+                  icon: const Icon(LucideIcons.sparkles, size: 16),
+                  label: const Text('Generate AI Study Plan'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF6366F1),
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: Colors.white10,
+                    minimumSize: const Size(double.infinity, 52),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 32),
+        ],
+      ),
+    );
+  }
+
+  // ── Timetable Tab ─────────────────────────────────────────────────────────
+  Widget _buildTimetableTab() {
+    if (!_generated || _planSubjects.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(LucideIcons.calendarDays, size: 48, color: Colors.white24),
+            const SizedBox(height: 16),
+            const Text('No plan generated yet.', style: TextStyle(color: Colors.white54, fontSize: 16)),
+            const SizedBox(height: 8),
+            const Text('Add subjects and tap\n"Generate AI Study Plan"',
+                textAlign: TextAlign.center, style: TextStyle(color: Colors.white24, fontSize: 13)),
+          ],
+        ),
+      );
+    }
+
+    // Simple timetable display
+    final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      itemCount: days.length,
+      itemBuilder: (context, dayIdx) {
+        final subjectForDay = _planSubjects[dayIdx % _planSubjects.length];
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF0F172A),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withOpacity(0.05)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF6366F1).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(days[dayIdx],
+                    style: const TextStyle(color: Color(0xFF6366F1), fontWeight: FontWeight.bold, fontSize: 11)),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(subjectForDay['name'],
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    Text('${_studyHours.toInt()}h study • ${_breakLength.toInt()}m break • $_studyTime',
+                        style: const TextStyle(color: Colors.white38, fontSize: 11)),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text('Scheduled', style: TextStyle(color: Colors.green, fontSize: 10, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // ── Progress Tab ──────────────────────────────────────────────────────────
+  Widget _buildProgressTab() {
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      children: [
+        _PlannerCard(
+          title: 'Overall Progress',
+          subtitle: 'Track completion across all subjects.',
+          child: Column(
+            children: _planSubjects.isEmpty
+                ? [const Center(child: Text('No subjects added.', style: TextStyle(color: Colors.white38)))]
+                : _planSubjects.map((s) => Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(s['name'], style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                      const Text('0%', style: TextStyle(color: Colors.redAccent, fontSize: 12)),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  LinearPercentIndicator(
+                    lineHeight: 6,
+                    percent: 0.05,
+                    padding: EdgeInsets.zero,
+                    backgroundColor: Colors.white.withOpacity(0.06),
+                    progressColor: const Color(0xFF6366F1).withOpacity(0.5),
+                    barRadius: const Radius.circular(10),
+                  ),
+                ],
+              ),
+            )).toList(),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// Helper card widget for Study Planner sections
+class _PlannerCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final Widget child;
+
+  const _PlannerCard({required this.title, required this.subtitle, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F172A),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(height: 4),
+          Text(subtitle, style: const TextStyle(color: Colors.white38, fontSize: 12)),
+          const SizedBox(height: 20),
+          child,
+        ],
       ),
     );
   }
