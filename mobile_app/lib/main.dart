@@ -273,7 +273,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                             Navigator.pushReplacement(
                                               context,
                                               PageRouteBuilder(
-                                                pageBuilder: (context, animation, second) => const DashboardScreen(),
+                                                pageBuilder: (context, animation, second) => const OnboardingScreen(),
                                                 transitionsBuilder: (context, animation, second, child) {
                                                   return FadeTransition(opacity: animation, child: child);
                                                 },
@@ -321,6 +321,159 @@ class _AuthScreenState extends State<AuthScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// --- Onboarding Screen (New) ---
+
+class OnboardingScreen extends StatefulWidget {
+  const OnboardingScreen({super.key});
+
+  @override
+  State<OnboardingScreen> createState() => _OnboardingScreenState();
+}
+
+class _OnboardingScreenState extends State<OnboardingScreen> {
+  String? selectedCategory;
+
+  final List<Map<String, dynamic>> categories = [
+    {'title': 'Class 1 to 5', 'subtitle': 'Foundational Learning', 'icon': LucideIcons.baby},
+    {'title': 'Class 6 to 10', 'subtitle': 'Secondary Education', 'icon': LucideIcons.bookOpen},
+    {'title': 'Engineering', 'subtitle': 'Technical & Professional', 'icon': LucideIcons.cpu},
+    {'title': 'Other', 'subtitle': 'Skill-based & Competitive', 'icon': LucideIcons.layoutGrid},
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Stack(
+        children: [
+          const AnimatedMeshBackground(),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 60),
+                  FadeInDown(
+                    child: Text(
+                      'Personalize your\nlearning journey',
+                      style: GoogleFonts.outfit(
+                        fontSize: 34,
+                        fontWeight: FontWeight.w800,
+                        height: 1.2,
+                        letterSpacing: -1,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  FadeInDown(
+                    delay: const Duration(milliseconds: 200),
+                    child: const Text(
+                        'Select your current education level to customize your study path.',
+                        style: TextStyle(color: Colors.white60, fontSize: 16)),
+                  ),
+                  const SizedBox(height: 48),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: categories.length,
+                      itemBuilder: (context, index) {
+                        final cat = categories[index];
+                        final isSelected = selectedCategory == cat['title'];
+                        return FadeInRight(
+                          delay: Duration(milliseconds: 300 + (index * 100)),
+                          child: GestureDetector(
+                            onTap: () => setState(() => selectedCategory = cat['title']),
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 16),
+                              padding: const EdgeInsets.all(24),
+                              decoration: BoxDecoration(
+                                color: isSelected 
+                                  ? Theme.of(context).colorScheme.primary.withOpacity(0.15)
+                                  : const Color(0xFF0F172A).withOpacity(0.8),
+                                borderRadius: BorderRadius.circular(24),
+                                border: Border.all(
+                                  color: isSelected 
+                                    ? Theme.of(context).colorScheme.primary.withOpacity(0.5)
+                                    : Colors.white.withOpacity(0.1),
+                                  width: 2,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: isSelected 
+                                        ? Theme.of(context).colorScheme.primary 
+                                        : Colors.white.withOpacity(0.05),
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: Icon(
+                                      cat['icon'], 
+                                      color: isSelected ? Colors.white : Colors.white70,
+                                      size: 24,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 20),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          cat['title'], 
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                                        ),
+                                        Text(
+                                          cat['subtitle'], 
+                                          style: const TextStyle(color: Colors.white38, fontSize: 13),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (isSelected) 
+                                    const Icon(LucideIcons.checkCircle2, color: Color(0xFF2DD4BF)),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  FadeInUp(
+                    child: ElevatedButton(
+                      onPressed: selectedCategory == null ? null : () {
+                        Navigator.pushReplacement(
+                          context,
+                          PageRouteBuilder(
+                            pageBuilder: (context, animation, second) => const DashboardScreen(),
+                            transitionsBuilder: (context, animation, second, child) {
+                              return FadeTransition(opacity: animation, child: child);
+                            },
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: Colors.white10,
+                        padding: const EdgeInsets.symmetric(vertical: 20),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                      child: const Text('Continue to Dashboard', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+                    ),
+                  ),
+                  const SizedBox(height: 48),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
