@@ -138,13 +138,11 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> {
   bool isLogin = true;
-  Offset _mousePos = Offset.zero;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: MouseRegion(
-        onHover: (event) => setState(() => _mousePos = event.localPosition),
         child: Stack(
           children: [
             const AnimatedMeshBackground(),
@@ -336,7 +334,10 @@ class OnboardingScreen extends StatefulWidget {
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
+  int step = 0; // 0: Category, 1: Engineering Department, 2: Semester
   String? selectedCategory;
+  String? selectedDept;
+  String? selectedSem;
 
   final List<Map<String, dynamic>> categories = [
     {'title': 'Class 1 to 5', 'subtitle': 'Foundational Learning', 'icon': LucideIcons.baby},
@@ -344,6 +345,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     {'title': 'Engineering', 'subtitle': 'Technical & Professional', 'icon': LucideIcons.cpu},
     {'title': 'Other', 'subtitle': 'Skill-based & Competitive', 'icon': LucideIcons.layoutGrid},
   ];
+
+  final List<String> departments = [
+    'Computer Science (CSE)',
+    'Electronics (ECE)',
+    'Mechanical (ME)',
+    'Civil Engineering (CE)',
+    'Information Technology (IT)',
+  ];
+
+  final Map<String, List<String>> subjectsData = {
+    'Computer Science (CSE)_Sem 3': ['Data Structures', 'Discrete Math', 'Digital Logic', 'OOPs with Java'],
+    'Computer Science (CSE)_Sem 4': ['Operating Systems', 'Design & Analysis of Algorithms', 'DBMS', 'Computer Org'],
+    'Electronics (ECE)_Sem 3': ['Network Theory', 'Electronic Devices', 'Signals & Systems', 'Mathematics III'],
+    'default': ['Mathematics', 'Physics', 'Chemistry', 'English', 'Coding']
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -357,123 +373,307 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const SizedBox(height: 60),
-                  FadeInDown(
-                    child: Text(
-                      'Personalize your\nlearning journey',
-                      style: GoogleFonts.outfit(
-                        fontSize: 34,
-                        fontWeight: FontWeight.w800,
-                        height: 1.2,
-                        letterSpacing: -1,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  FadeInDown(
-                    delay: const Duration(milliseconds: 200),
-                    child: const Text(
-                        'Select your current education level to customize your study path.',
-                        style: TextStyle(color: Colors.white60, fontSize: 16)),
-                  ),
-                  const SizedBox(height: 48),
+                  const SizedBox(height: 40),
+                  _buildHeader(),
+                  const SizedBox(height: 32),
                   Expanded(
-                    child: ListView.builder(
-                      itemCount: categories.length,
-                      itemBuilder: (context, index) {
-                        final cat = categories[index];
-                        final isSelected = selectedCategory == cat['title'];
-                        return FadeInRight(
-                          delay: Duration(milliseconds: 300 + (index * 100)),
-                          child: GestureDetector(
-                            onTap: () => setState(() => selectedCategory = cat['title']),
-                            child: Container(
-                              margin: const EdgeInsets.only(bottom: 16),
-                              padding: const EdgeInsets.all(24),
-                              decoration: BoxDecoration(
-                                color: isSelected 
-                                  ? Theme.of(context).colorScheme.primary.withOpacity(0.15)
-                                  : const Color(0xFF0F172A).withOpacity(0.8),
-                                borderRadius: BorderRadius.circular(24),
-                                border: Border.all(
-                                  color: isSelected 
-                                    ? Theme.of(context).colorScheme.primary.withOpacity(0.5)
-                                    : Colors.white.withOpacity(0.1),
-                                  width: 2,
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: isSelected 
-                                        ? Theme.of(context).colorScheme.primary 
-                                        : Colors.white.withOpacity(0.05),
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                    child: Icon(
-                                      cat['icon'], 
-                                      color: isSelected ? Colors.white : Colors.white70,
-                                      size: 24,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 20),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          cat['title'], 
-                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                                        ),
-                                        Text(
-                                          cat['subtitle'], 
-                                          style: const TextStyle(color: Colors.white38, fontSize: 13),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  if (isSelected) 
-                                    const Icon(LucideIcons.checkCircle2, color: Color(0xFF2DD4BF)),
-                                ],
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
+                    child: step == 0 
+                      ? _buildCategoryList() 
+                      : step == 1 
+                        ? _buildDeptList() 
+                        : _buildSemList(),
                   ),
+                  const SizedBox(height: 16),
+                  _buildActionBar(),
                   const SizedBox(height: 24),
-                  FadeInUp(
-                    child: ElevatedButton(
-                      onPressed: selectedCategory == null ? null : () {
-                        Navigator.pushReplacement(
-                          context,
-                          PageRouteBuilder(
-                            pageBuilder: (context, animation, second) => const DashboardScreen(),
-                            transitionsBuilder: (context, animation, second, child) {
-                              return FadeTransition(opacity: animation, child: child);
-                            },
-                          ),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        foregroundColor: Colors.white,
-                        disabledBackgroundColor: Colors.white10,
-                        padding: const EdgeInsets.symmetric(vertical: 20),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      ),
-                      child: const Text('Continue to Dashboard', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
-                    ),
-                  ),
-                  const SizedBox(height: 48),
                 ],
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    String title = 'Personalize your\nlearning journey';
+    String sub = 'Select your current education level to customize your path.';
+    
+    if (step == 1) {
+      title = 'Select your\nDepartment';
+      sub = 'Choose your engineering branch to get relevant subjects.';
+    } else if (step == 2) {
+      title = 'Choose your\nSemester';
+      sub = 'Select your current semester for $selectedDept.';
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        FadeInDown(
+          child: Text(
+            title,
+            style: GoogleFonts.outfit(
+              fontSize: 32,
+              fontWeight: FontWeight.w800,
+              height: 1.2,
+              letterSpacing: -1,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        FadeInDown(
+          delay: const Duration(milliseconds: 200),
+          child: Text(sub, style: const TextStyle(color: Colors.white60, fontSize: 16)),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCategoryList() {
+    return ListView.builder(
+      itemCount: categories.length,
+      itemBuilder: (context, index) {
+        final cat = categories[index];
+        final isSelected = selectedCategory == cat['title'];
+        return _buildSelectionItem(
+          index: index,
+          title: cat['title'],
+          subtitle: cat['subtitle'],
+          icon: cat['icon'],
+          isSelected: isSelected,
+          onTap: () {
+            setState(() {
+              selectedCategory = cat['title'];
+            });
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildDeptList() {
+    return ListView.builder(
+      itemCount: departments.length,
+      itemBuilder: (context, index) {
+        final dept = departments[index];
+        final isSelected = selectedDept == dept;
+        return _buildSelectionItem(
+          index: index,
+          title: dept,
+          subtitle: 'Engineering Branch',
+          icon: LucideIcons.binary,
+          isSelected: isSelected,
+          onTap: () => setState(() => selectedDept = dept),
+        );
+      },
+    );
+  }
+
+  Widget _buildSemList() {
+    return GridView.builder(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        childAspectRatio: 1.5,
+      ),
+      itemCount: 8,
+      itemBuilder: (context, index) {
+        final sem = 'Sem ${index + 1}';
+        final isSelected = selectedSem == sem;
+        return GestureDetector(
+          onTap: () => setState(() => selectedSem = sem),
+          child: Container(
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: isSelected 
+                ? Theme.of(context).colorScheme.primary.withOpacity(0.2)
+                : const Color(0xFF0F172A).withOpacity(0.8),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: isSelected ? Theme.of(context).colorScheme.primary : Colors.white10,
+                width: 2,
+              ),
+            ),
+            child: Text(
+              sem,
+              style: TextStyle(
+                fontSize: 18, 
+                fontWeight: FontWeight.bold,
+                color: isSelected ? Colors.white : Colors.white70,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSelectionItem({
+    required int index,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return FadeInRight(
+      delay: Duration(milliseconds: 100 * index),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: isSelected 
+              ? Theme.of(context).colorScheme.primary.withOpacity(0.15)
+              : const Color(0xFF0F172A).withOpacity(0.8),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: isSelected 
+                ? Theme.of(context).colorScheme.primary.withOpacity(0.5)
+                : Colors.white.withOpacity(0.1),
+              width: 2,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isSelected 
+                    ? Theme.of(context).colorScheme.primary 
+                    : Colors.white.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(icon, color: isSelected ? Colors.white : Colors.white70, size: 24),
+              ),
+              const SizedBox(width: 20),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+                    Text(subtitle, style: const TextStyle(color: Colors.white38, fontSize: 12)),
+                  ],
+                ),
+              ),
+              if (isSelected) const Icon(LucideIcons.checkCircle2, color: Color(0xFF2DD4BF)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionBar() {
+    bool canGoNext = false;
+    if (step == 0 && selectedCategory != null) canGoNext = true;
+    if (step == 1 && selectedDept != null) canGoNext = true;
+    if (step == 2 && selectedSem != null) canGoNext = true;
+
+    return Row(
+      children: [
+        if (step > 0) ...[
+          IconButton(
+            onPressed: () => setState(() => step--),
+            icon: const Icon(LucideIcons.arrowLeft, color: Colors.white70),
+            padding: const EdgeInsets.all(16),
+          ),
+          const SizedBox(width: 12),
+        ],
+        Expanded(
+          child: FadeInUp(
+            child: ElevatedButton(
+              onPressed: !canGoNext ? null : () {
+                if (step == 0 && selectedCategory == 'Engineering') {
+                  setState(() => step = 1);
+                } else if (step == 1) {
+                  setState(() => step = 2);
+                } else {
+                  // Finish onboarding
+                  _showSubjectsPreview();
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: Colors.white10,
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                elevation: 8,
+              ),
+              child: Text(
+                (step == 0 && selectedCategory != 'Engineering') || step == 2 
+                  ? 'Complete Setup' 
+                  : 'Next Step',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showSubjectsPreview() {
+    final key = '${selectedDept}_$selectedSem';
+    final subjects = subjectsData[key] ?? subjectsData['default']!;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF0F172A),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Personalized Subjects', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text('We have matched these subjects for $selectedSem ($selectedDept)', style: const TextStyle(color: Colors.white54)),
+            const SizedBox(height: 32),
+            ...subjects.map((s) => Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                children: [
+                  const Icon(LucideIcons.checkCircle, color: Color(0xFF2DD4BF), size: 18),
+                  const SizedBox(width: 16),
+                  Text(s, style: const TextStyle(fontWeight: FontWeight.w600)),
+                ],
+              ),
+            )),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => const DashboardScreen()),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                child: const Text('Start Studying', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
       ),
     );
   }
