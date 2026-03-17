@@ -22,7 +22,7 @@ function AppContent() {
     )
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !user) {
     return <AuthPage />
   }
 

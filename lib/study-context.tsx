@@ -320,7 +320,7 @@ export function StudyProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (user && user.subjects && user.subjects.length > 0) {
       setRevisionReminders([
-        { id: '1', topicName: user.subjects[0].name + ' Basics', date: new Date().toISOString() }
+        { id: '1', topicName: (user.subjects[0]?.name || 'Study') + ' Basics', date: new Date().toISOString() }
       ])
     } else {
       setRevisionReminders([])
@@ -407,14 +407,24 @@ export function StudyProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = () => {
-    setUser(null)
     setIsAuthenticated(false)
+    setUser(null)
     localStorage.removeItem('study-user')
     setStudySessions([])
     setQuizResults([])
     setFlashcards([])
     setRoadmaps([])
     setDownloadedTopics([])
+    // Clear all user-specific data from localStorage for security
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('study-') || key.startsWith('quiz-')) {
+        // We keep 'registered-users' but clear session data
+        if (key !== 'registered-users') {
+          // Optional: clear specific user data if you want to be extreme
+          // localStorage.removeItem(key)
+        }
+      }
+    })
   }
 
   const updateProfile = (updates: Partial<UserProfile>) => {
