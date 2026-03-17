@@ -5,10 +5,11 @@ import { useStudy, CareerPath, Roadmap } from '@/lib/study-context'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Briefcase, Target, Map, Shield, Server, Code, ChevronRight, Sparkles, MessageSquare, ExternalLink } from 'lucide-react'
+import { Briefcase, Target, Map, Shield, Server, Code, ChevronRight, Sparkles, MessageSquare, ExternalLink, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { generateRoadmapAction, getCareerGuidance } from '@/app/actions/ai'
 import { toast } from 'sonner'
+import ReactMarkdown from 'react-markdown'
 
 const CAREER_PATHS: CareerPath[] = [
                   {
@@ -36,7 +37,7 @@ const CAREER_PATHS: CareerPath[] = [
 ]
 
 export function GuidancePage() {
-                  const { roadmaps, generateRoadmap } = useStudy()
+                  const { roadmaps, generateRoadmap, deleteRoadmap } = useStudy()
                   const [goal, setGoal] = useState('')
                   const [selectedPath, setSelectedPath] = useState<CareerPath | null>(null)
                   const [isGenerating, setIsGenerating] = useState(false)
@@ -122,10 +123,13 @@ export function GuidancePage() {
                                                                                                             <div className="grid gap-6">
                                                                                                                               {roadmaps.map((r) => (
                                                                                                                                                 <Card key={r.id} className="overflow-hidden">
-                                                                                                                                                                  <CardHeader className="bg-muted/50 border-b">
+                                                                                                                                                                  <CardHeader className="bg-muted/50 border-b flex flex-row items-center justify-between">
                                                                                                                                                                                     <CardTitle className="flex items-center gap-3">
                                                                                                                                                                                                       <Map className="w-5 h-5 text-primary" /> {r.goal}
                                                                                                                                                                                     </CardTitle>
+                                                                                                                                                                                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-red-500 hover:bg-red-500/10" onClick={() => deleteRoadmap(r.id)}>
+                                                                                                                                                                                      <Trash2 className="w-5 h-5" />
+                                                                                                                                                                                    </Button>
                                                                                                                                                                   </CardHeader>
                                                                                                                                                                   <CardContent className="p-8">
                                                                                                                                                                                     <div className="grid md:grid-cols-3 gap-8 relative">
@@ -144,6 +148,41 @@ export function GuidancePage() {
                                                                                                                               ))}
                                                                                                             </div>
                                                                                           </div>
+                                                                        )}
+
+                                                                        {/* Full Screen AI Career Advisor Area */}
+                                                                        {careerAdvice && (
+                                                                        <div className="lg:col-span-12 animate-in fade-in slide-in-from-bottom-8">
+                                                                          <Card className="border-none shadow-2xl bg-slate-900 text-white p-8 md:p-12 rounded-[3rem] overflow-hidden relative">
+                                                                            <div className="absolute top-0 right-0 p-8 opacity-5">
+                                                                              <Sparkles className="w-64 h-64" />
+                                                                            </div>
+                                                                            <div className="relative z-10 max-w-4xl mx-auto space-y-8">
+                                                                              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-indigo-500/30 pb-6">
+                                                                                <div className="space-y-2">
+                                                                                  <div className="flex items-center gap-3 text-indigo-400">
+                                                                                    <Sparkles className="w-6 h-6" />
+                                                                                    <span className="font-black tracking-widest uppercase text-sm">AI Career Mastery Plan</span>
+                                                                                  </div>
+                                                                                  <h3 className="text-3xl font-bold">{careerQuestion}</h3>
+                                                                                </div>
+                                                                                <Button variant="outline" className="border-indigo-500/30 text-indigo-300 hover:text-white hover:bg-indigo-500/20" onClick={() => setCareerAdvice('')}>
+                                                                                  Clear Active Plan
+                                                                                </Button>
+                                                                              </div>
+                                                                              
+                                                                              <div className="prose prose-invert prose-indigo max-w-none 
+                                                                                prose-headings:font-black prose-headings:tracking-tight 
+                                                                                prose-h1:text-4xl prose-h2:text-2xl prose-h2:mt-12 prose-h2:mb-6 
+                                                                                prose-p:text-slate-300 prose-p:leading-relaxed prose-p:text-lg
+                                                                                prose-li:text-slate-300 prose-li:text-lg
+                                                                                prose-strong:text-indigo-300
+                                                                                prose-hr:border-indigo-500/20">
+                                                                                <ReactMarkdown>{careerAdvice}</ReactMarkdown>
+                                                                              </div>
+                                                                            </div>
+                                                                          </Card>
+                                                                        </div>
                                                                         )}
 
                                                                         {/* Career Paths */}
@@ -210,7 +249,7 @@ export function GuidancePage() {
                                                                                                                                                 onClick={handleAskCareer}
                                                                                                                                                 disabled={isAsking || !careerQuestion}
                                                                                                                               >
-                                                                                                                                                {isAsking ? "Thinking..." : "Get Expert Advice"}
+                                                                                                                                                {isAsking ? "Generating Professional Plan..." : "Get Expert Advice"}
                                                                                                                               </Button>
                                                                                                                               
                                                                                                                               {careerAdvice && (

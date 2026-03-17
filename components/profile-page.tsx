@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from 'react'
-import { useStudy, SUBJECTS_BY_LEVEL, EducationLevel, EngineeringBranch } from '@/lib/study-context'
+import { useStudy, getSubjectsForProfile, EducationLevel, EngineeringBranch } from '@/lib/study-context'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -42,15 +42,7 @@ export function ProfilePage() {
     logout()
   }
 
-  const getSubjectKey = () => {
-    if (!user) return 'other'
-    if (user.educationLevel === 'engineering' && user.branch) {
-      return `engineering-${user.branch}`
-    }
-    return user.educationLevel
-  }
-
-  const subjects = SUBJECTS_BY_LEVEL[getSubjectKey()] || SUBJECTS_BY_LEVEL['other']
+  const subjects = user ? getSubjectsForProfile(user.state, user.educationLevel, user.branch) : getSubjectsForProfile()
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -163,6 +155,12 @@ export function ProfilePage() {
         </CardHeader>
         <CardContent>
           <div className="grid sm:grid-cols-2 gap-6">
+            {user?.state && (
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Region</p>
+                <p className="font-medium text-foreground">{user.state}</p>
+              </div>
+            )}
             <div>
               <p className="text-sm text-muted-foreground mb-1">Education Level</p>
               <p className="font-medium text-foreground">

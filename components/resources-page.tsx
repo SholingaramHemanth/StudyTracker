@@ -1,135 +1,203 @@
 "use client"
 
 import { useState } from 'react'
-import { useStudy } from '@/lib/study-context'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useStudy, getSubjectsForProfile } from '@/lib/study-context'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { FileText, Download, TrendingUp, AlertCircle, Bookmark, Search } from 'lucide-react'
+import { Book, PlayCircle, ExternalLink, Bookmark, Search, GraduationCap } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
 
-interface QuestionPaper {
-                  id: string
-                  subject: string
-                  year: string
-                  type: 'Mid-term' | 'Final' | 'Sessional'
-                  questions: string[]
-                  repeatedCount: number
+interface Resource {
+  id: string
+  title: string
+  topics: string[]
+  wikiLink: string
+  youtubeLink: string
 }
 
-const MOCK_PAPERS: QuestionPaper[] = [
-                  {
-                                    id: '1',
-                                    subject: 'Operating Systems',
-                                    year: '2023',
-                                    type: 'Final',
-                                    questions: ["What is a deadlock?", "Explain Banker's Algorithm", "Difference between Paging and Segmentation"],
-                                    repeatedCount: 12
-                  },
-                  {
-                                    id: '2',
-                                    subject: 'Computer Networks',
-                                    year: '2022',
-                                    type: 'Final',
-                                    questions: ["Explain OSI Layers", "What is TCP 3-way handshake?", "IPv4 vs IPv6"],
-                                    repeatedCount: 8
-                  },
-                  {
-                                    id: '3',
-                                    subject: 'DBMS',
-                                    year: '2023',
-                                    type: 'Mid-term',
-                                    questions: ["Explain ACID properties", "What is Normalization?", "SQL Join types"],
-                                    repeatedCount: 15
-                  }
-]
+const generateResourcesForSubject = (subjectName: string, state?: string): Resource => {
+  const name = subjectName.toLowerCase();
+  
+  let topics: string[] = [];
+  
+  if (state === 'Andhra Pradesh' || state === 'Telangana') {
+    if (name.includes('math1a') || name.includes('maths 1a') || name.includes('1a')) {
+      topics = ["Functions", "Mathematical Induction", "Matrices", "Vector Algebra", "Trigonometric Ratios up to Transformations", "Hyperbolic Functions", "Properties of Triangles"];
+    } else if (name.includes('math1b') || name.includes('maths 1b') || name.includes('1b')) {
+      topics = ["Locus", "Transformation of Axes", "The Straight Line", "Pair of Straight Lines", "Three Dimensional Coordinates", "Direction Cosines and Direction Ratios", "The Plane", "Limits and Continuity", "Differentiation", "Applications of Derivatives"];
+    } else if (name.includes('math') && name.includes('2a')) {
+      topics = ["Complex Numbers", "De Moivre's Theorem", "Quadratic Expressions", "Theory of Equations", "Permutations and Combinations", "Binomial Theorem", "Partial Fractions", "Measures of Dispersion", "Probability", "Random Variables"];
+    } else if (name.includes('math') && name.includes('2b')) {
+      topics = ["Circle", "System of Circles", "Parabola", "Ellipse", "Hyperbola", "Integration", "Definite Integrals", "Differential Equations"];
+    } else if (name.includes('physics')) {
+      topics = ["Physical World", "Units and Measurements", "Motion in a Straight Line", "Motion in a Plane", "Laws of Motion", "Work, Energy and Power", "Systems of Particles", "Oscillations", "Gravitation"];
+    } else if (name.includes('chemistry')) {
+      topics = ["Atomic Structure", "Classification of Elements", "Chemical Bonding", "States of Matter", "Thermodynamics", "Chemical Equilibrium and Acids-Bases", "Hydrogen and its Compounds", "s-Block Elements"];
+    } else if (name.includes('botany')) {
+      topics = ["Diversity in the Living World", "Structural Organisation in Plants- Morphology", "Reproduction in Plants", "Plant Systematics", "Cell Structure and Function", "Internal Organisation of Plants", "Plant Ecology"];
+    } else if (name.includes('zoology')) {
+      topics = ["Diversity of Living World", "Structural Organization in Animals", "Animal Diversity", "Biology & Human Welfare", "Locomotion & Reproduction in Protozoa", "Ecology & Environment"];
+    } else if (name.includes('telugu')) {
+      topics = ["Poetry (Padya Bhagam)", "Prose (Gadya Bhagam)", "Short Stories (Upavachakam)", "Grammar (Vyakaranam)"];
+    } else {
+      topics = ["Important AP/TS Board Topics", "Previous Year Question Papers", "Core Chapter Concepts", "Revision Notes"];
+    }
+  } else if (state === 'Tamil Nadu') {
+    if (name.includes('math')) {
+      topics = ["Applications of Matrices", "Complex Numbers", "Theory of Equations", "Inverse Trigonometric Functions", "Two Dimensional Analytical Geometry", "Applications of Vector Algebra"];
+    } else if (name.includes('physics')) {
+      topics = ["Electrostatics", "Current Electricity", "Magnetism", "Electromagnetic Induction", "Electromagnetic Waves", "Ray Optics", "Wave Optics", "Dual Nature of Radiation"];
+    } else if (name.includes('chemistry')) {
+      topics = ["Metallurgy", "p-Block Elements", "Transition Elements", "Coordination Chemistry", "Solid State", "Chemical Kinetics", "Ionic Equilibrium"];
+    } else if (name.includes('biology') || name.includes('botany') || name.includes('zoology')) {
+      topics = ["Reproduction in Organisms", "Human Reproduction", "Reproductive Health", "Principles of Inheritance", "Molecular Genetics", "Evolution", "Human Health and Diseases"];
+    } else if (name.includes('tamil')) {
+      topics = ["Iyal 1: Language", "Iyal 2: Environment", "Iyal 3: Culture", "Grammar (Ilakkanam)"];
+    } else {
+      topics = ["Tamil Nadu Samacheer Kalvi Topics", "Previous Year Question Papers", "Core Chapter Concepts", "Revision Notes"];
+    }
+  } else {
+    // CBSE / Default / North India
+    if (name.includes('math') || name.includes('1a') || name.includes('2a')) {
+      topics = ["Matrices & Determinants", "Complex Numbers", "Integration", "Probability", "Differential Equations"];
+    } else if (name.includes('physics')) {
+      topics = ["Mechanics", "Electromagnetism", "Optics", "Thermodynamics", "Modern Physics"];
+    } else if (name.includes('chemistry')) {
+      topics = ["Organic Chemistry structure & mechanisms", "Chemical Bonding", "Thermodynamics", "Periodic Table"];
+    } else if (name.includes('botany')) {
+      topics = ["Plant Physiology", "Genetics", "Cell Biology", "Ecology"];
+    } else if (name.includes('zoology')) {
+      topics = ["Human Anatomy", "Evolution", "Animal Diversity", "Reproductive System"];
+    } else if (name.includes('english')) {
+      topics = ["Grammar and Vocabulary", "Reading Comprehension", "Essay Writing", "Literature Analysis"];
+    } else if (name.includes('os') || name.includes('operating')) {
+      topics = ["Processes & Threads", "Memory Management", "File Systems", "Deadlocks"];
+    } else {
+      topics = ["Introduction & Basics", "Core Principles", "Advanced Applications", "Previous Year Papers"];
+    }
+  }
+
+  return {
+    id: subjectName,
+    title: `${subjectName} Resources`,
+    topics,
+    wikiLink: `https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(subjectName)}`,
+    youtubeLink: `https://www.youtube.com/results?search_query=${encodeURIComponent(subjectName + ' full course')}`,
+  }
+}
 
 export function ResourcesPage() {
-                  const { user } = useStudy()
-                  const [search, setSearch] = useState('')
+  const { user } = useStudy()
+  const subjects = user ? getSubjectsForProfile(user.state, user.educationLevel, user.branch, user.group) : getSubjectsForProfile()
+  
+  const [selectedSubject, setSelectedSubject] = useState<string | null>(subjects.length > 0 ? subjects[0].name : null)
+  const [search, setSearch] = useState('')
 
-                  const filteredPapers = MOCK_PAPERS.filter(p =>
-                                    p.subject.toLowerCase().includes(search.toLowerCase()) ||
-                                    p.year.includes(search)
-                  )
+  const activeSubject = selectedSubject || (subjects.length > 0 ? subjects[0].name : 'General');
+  const activeResource = generateResourcesForSubject(activeSubject, user?.state);
 
-                  return (
-                                    <div className="max-w-5xl mx-auto space-y-8">
-                                                      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-                                                                        <div className="space-y-2">
-                                                                                          <h2 className="text-3xl font-bold tracking-tight">Previous Year Content</h2>
-                                                                                          <p className="text-muted-foreground">Access bank of question papers and high-yield topics.</p>
-                                                                        </div>
-                                                                        <div className="relative w-full md:w-64">
-                                                                                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                                                                                          <Input
-                                                                                                            placeholder="Search subject or year..."
-                                                                                                            className="pl-10"
-                                                                                                            value={search}
-                                                                                                            onChange={(e) => setSearch(e.target.value)}
-                                                                                          />
-                                                                        </div>
-                                                      </div>
+  const filteredSubjects = subjects.filter(s => s.name.toLowerCase().includes(search.toLowerCase()))
 
-                                                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                                                                        <div className="lg:col-span-2 space-y-6">
-                                                                                          <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-primary">
-                                                                                                            <TrendingUp className="w-4 h-4" /> Most Repeated Questions
-                                                                                          </div>
-                                                                                          <Card className="border-none shadow-sm bg-primary/5">
-                                                                                                            <CardContent className="p-0">
-                                                                                                                              {filteredPapers.slice(0, 3).map((paper, i) => (
-                                                                                                                                                <div key={paper.id} className="p-6 border-b last:border-0 hover:bg-primary/10 transition-colors">
-                                                                                                                                                                  <div className="flex items-start justify-between mb-4">
-                                                                                                                                                                                    <div className="space-y-1">
-                                                                                                                                                                                                      <h4 className="font-bold text-lg">{paper.subject}</h4>
-                                                                                                                                                                                                      <div className="flex gap-2">
-                                                                                                                                                                                                                        <Badge variant="secondary" className="text-[10px]">{paper.year}</Badge>
-                                                                                                                                                                                                                        <Badge variant="outline" className="text-[10px]">{paper.type}</Badge>
-                                                                                                                                                                                                      </div>
-                                                                                                                                                                                    </div>
-                                                                                                                                                                                    <Button size="sm" variant="ghost" className="h-8 px-2">
-                                                                                                                                                                                                      <Download className="w-4 h-4 mr-2" /> PDF
-                                                                                                                                                                                    </Button>
-                                                                                                                                                                  </div>
-                                                                                                                                                                  <ul className="space-y-2">
-                                                                                                                                                                                    {paper.questions.map((q, j) => (
-                                                                                                                                                                                                      <li key={j} className="text-sm flex gap-3 text-muted-foreground">
-                                                                                                                                                                                                                        <Bookmark className="w-4 h-4 shrink-0 text-amber-500" />
-                                                                                                                                                                                                                        {q}
-                                                                                                                                                                                                      </li>
-                                                                                                                                                                                    ))}
-                                                                                                                                                                  </ul>
-                                                                                                                                                </div>
-                                                                                                                              ))}
-                                                                                                            </CardContent>
-                                                                                          </Card>
-                                                                        </div>
+  return (
+    <div className="max-w-6xl mx-auto space-y-8">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div className="space-y-2">
+          <h2 className="text-3xl font-bold tracking-tight">Study Resources</h2>
+          <p className="text-muted-foreground">Access important topics, wiki articles, and video lectures per subject.</p>
+        </div>
+        <div className="relative w-full md:w-64">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Search your subjects..."
+            className="pl-10"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+      </div>
 
-                                                                        <div className="space-y-6">
-                                                                                          <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-orange-600">
-                                                                                                            <AlertCircle className="w-4 h-4" /> Exam Strategy
-                                                                                          </div>
-                                                                                          <Card className="bg-orange-50 border-orange-100 dark:bg-orange-950/20 dark:border-orange-500/20">
-                                                                                                            <CardHeader>
-                                                                                                                              <CardTitle className="text-orange-700 dark:text-orange-400">Repeated Analysis</CardTitle>
-                                                                                                            </CardHeader>
-                                                                                                            <CardContent className="space-y-4">
-                                                                                                                              <div className="p-4 bg-white dark:bg-black/40 rounded-xl border border-orange-200 dark:border-orange-800 flex items-center justify-between">
-                                                                                                                                                <span className="text-xs font-bold">Deadlocks</span>
-                                                                                                                                                <Badge className="bg-orange-600">85% Likely</Badge>
-                                                                                                                              </div>
-                                                                                                                              <div className="p-4 bg-white dark:bg-black/40 rounded-xl border border-orange-200 dark:border-orange-800 flex items-center justify-between">
-                                                                                                                                                <span className="text-xs font-bold">OSI Model</span>
-                                                                                                                                                <Badge className="bg-orange-600">72% Likely</Badge>
-                                                                                                                              </div>
-                                                                                                                              <p className="text-xs text-orange-600/80 leading-relaxed">
-                                                                                                                                                Our AI analyzed 10 years of papers. Topics marked with high likelihood appear in 8 out of every 10 exams.
-                                                                                                                              </p>
-                                                                                                            </CardContent>
-                                                                                          </Card>
-                                                                        </div>
-                                                      </div>
-                                    </div>
-                  )
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        {/* Subject Sidebar */}
+        <Card className="lg:col-span-1 h-fit border-none shadow-sm dark:bg-card/50">
+          <CardHeader className="pb-3 border-b">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <GraduationCap className="h-5 w-5 text-primary" />
+              Your Subjects
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-2 space-y-1">
+            {filteredSubjects.length > 0 ? (
+              filteredSubjects.map((subject) => (
+                <button
+                  key={subject.id}
+                  onClick={() => setSelectedSubject(subject.name)}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left transition-all",
+                    activeSubject === subject.name
+                      ? "bg-primary/10 text-primary font-medium"
+                      : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <span className="text-xl">{subject.icon}</span>
+                  <span className="flex-1 truncate">{subject.name}</span>
+                </button>
+              ))
+            ) : (
+              <div className="text-center py-6 text-muted-foreground text-sm">
+                No subjects found.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Selected Subject Content */}
+        <div className="lg:col-span-3 space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-2xl font-bold flex items-center gap-3">
+              <Book className="text-primary w-6 h-6" /> 
+              {activeResource.title}
+            </h3>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" className="gap-2" asChild>
+                <a href={activeResource.wikiLink} target="_blank" rel="noreferrer">
+                  <ExternalLink className="w-4 h-4" /> Wikipedia
+                </a>
+              </Button>
+              <Button size="sm" className="gap-2 bg-red-600 hover:bg-red-700 text-white" asChild>
+                <a href={activeResource.youtubeLink} target="_blank" rel="noreferrer">
+                  <PlayCircle className="w-4 h-4" /> YouTube Tutorials
+                </a>
+              </Button>
+            </div>
+          </div>
+
+          <Card className="border-border/50">
+            <CardHeader className="bg-primary/5 border-b pb-4">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Bookmark className="w-5 h-5 text-primary" /> Highly Repeated & Important Topics
+              </CardTitle>
+              <CardDescription>Master these topics first to boost your score.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-6">
+              <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {activeResource.topics.map((topic, i) => (
+                  <li key={i} className="flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
+                    <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
+                      {i + 1}
+                    </div>
+                    <div>
+                      <span className="font-medium text-foreground">{topic}</span>
+                      <p className="text-xs text-muted-foreground mt-1 text-balance">Frequently appears in exams and competitive tests.</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  )
 }

@@ -194,6 +194,12 @@
       "languageVersion": "3.4"
     },
     {
+      "name": "lottie",
+      "rootUri": "file:///C:/Users/solin/AppData/Local/Pub/Cache/hosted/pub.dev/lottie-3.3.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.9"
+    },
+    {
       "name": "lucide_icons",
       "rootUri": "file:///C:/Users/solin/AppData/Local/Pub/Cache/hosted/pub.dev/lucide_icons-0.257.0",
       "packageUri": "lib/",

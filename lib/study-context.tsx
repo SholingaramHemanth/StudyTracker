@@ -5,6 +5,8 @@ import React, { createContext, useContext, useState, useEffect, useCallback, Rea
 export type EducationLevel = 'class-1-5' | 'class-6-10' | 'intermediate' | 'engineering' | 'other'
 export type EngineeringBranch = 'CSE' | 'ECE' | 'Mechanical' | 'Civil' | 'EEE' | 'Chemical'
 export type IntermediateYear = '1st Year' | '2nd Year'
+export type IntermediateGroup = 'MPC' | 'BiPC' | 'CEC' | 'MEC'
+export type RegionState = 'Andhra Pradesh' | 'Telangana' | 'Tamil Nadu' | 'North India' | 'Other'
 
 export interface Subject {
   id: string
@@ -33,11 +35,13 @@ export interface UserProfile {
   id: string
   name: string
   email: string
+  state?: RegionState
   educationLevel: EducationLevel
   class?: string
   branch?: EngineeringBranch
   semester?: number
   year?: IntermediateYear
+  group?: IntermediateGroup
   subjects: Subject[]
   dailyGoal: number // in minutes
   streak: number
@@ -94,6 +98,7 @@ interface StudyContextType {
   downloadTopic: (topicId: string) => void
   roadmaps: Roadmap[]
   generateRoadmap: (goal: string, steps?: { month: string; target: string }[]) => void
+  deleteRoadmap: (id: string) => void
   revisionReminders: { id: string; topicName: string; date: string }[]
   // Timer state
   timer: {
@@ -114,27 +119,7 @@ interface StudyContextType {
 const StudyContext = createContext<StudyContextType | undefined>(undefined)
 
 const SUBJECTS_BY_LEVEL: Record<string, Subject[]> = {
-  'class-1-5': [
-    { id: 'math', name: 'Mathematics', icon: '📐' },
-    { id: 'english', name: 'English', icon: '📖' },
-    { id: 'science', name: 'Science', icon: '🔬' },
-    { id: 'social', name: 'Social Studies', icon: '🌍' },
-  ],
-  'class-6-10': [
-    { id: 'math', name: 'Mathematics', icon: '📐' },
-    { id: 'english', name: 'English', icon: '📖' },
-    { id: 'science', name: 'Science', icon: '🔬' },
-    { id: 'social', name: 'Social Studies', icon: '🌍' },
-    { id: 'hindi', name: 'Hindi', icon: '📝' },
-    { id: 'computer', name: 'Computer Science', icon: '💻' },
-  ],
-  'intermediate': [
-    { id: 'physics', name: 'Physics', icon: '⚡' },
-    { id: 'chemistry', name: 'Chemistry', icon: '🧪' },
-    { id: 'math', name: 'Mathematics', icon: '📐' },
-    { id: 'biology', name: 'Biology', icon: '🧬' },
-    { id: 'english', name: 'English', icon: '📖' },
-  ],
+  // We'll generate dynamic ones for class-1-5, class-6-10, intermediate based on region
   'engineering-CSE': [
     { id: 'os', name: 'Operating Systems', icon: '💻' },
     { id: 'cn', name: 'Computer Networks', icon: '🌐' },
@@ -164,6 +149,126 @@ const SUBJECTS_BY_LEVEL: Record<string, Subject[]> = {
   ],
 }
 
+// Helper to get subjects based on State and Level
+export const getSubjectsForProfile = (state?: RegionState, level?: EducationLevel, branch?: string, group?: string): Subject[] => {
+  if (level === 'engineering' && branch) {
+    return SUBJECTS_BY_LEVEL[`engineering-${branch}`] || SUBJECTS_BY_LEVEL['other'];
+  }
+  if (level === 'other' || !level) {
+    return SUBJECTS_BY_LEVEL['other'];
+  }
+
+  // Define subjects based on region for schools/inter
+  if (state === 'Andhra Pradesh' || state === 'Telangana') {
+    if (level === 'class-1-5') {
+      return [
+        { id: 'telugu', name: 'Telugu', icon: '📝' },
+        { id: 'english', name: 'English', icon: '📖' },
+        { id: 'math', name: 'Mathematics', icon: '📐' },
+        { id: 'evs', name: 'Environmental Science', icon: '🌍' },
+      ];
+    }
+    if (level === 'class-6-10') {
+      return [
+        { id: 'telugu', name: 'Telugu', icon: '📝' },
+        { id: 'hindi', name: 'Hindi', icon: '📝' },
+        { id: 'english', name: 'English', icon: '📖' },
+        { id: 'math', name: 'Mathematics', icon: '📐' },
+        { id: 'physics', name: 'Physical Science', icon: '⚡' },
+        { id: 'biology', name: 'Biological Science', icon: '🧬' },
+        { id: 'social', name: 'Social Studies', icon: '🌍' },
+      ];
+    }
+    if (level === 'intermediate') {
+      const isMpc = group === 'MPC';
+      const isBipc = group === 'BiPC';
+      
+      const common = [
+        { id: 'english', name: 'English', icon: '📖' },
+        { id: 'sanskrit', name: 'Sanskrit/Telugu', icon: '📝' },
+      ];
+      
+      if (isMpc) {
+        return [
+          { id: 'math1a', name: 'Maths 1A/2A', icon: '📐' },
+          { id: 'math1b', name: 'Maths 1B/2B', icon: '📐' },
+          { id: 'physics', name: 'Physics', icon: '⚡' },
+          { id: 'chemistry', name: 'Chemistry', icon: '🧪' },
+          ...common
+        ];
+      } else if (isBipc) {
+        return [
+          { id: 'botany', name: 'Botany', icon: '🌿' },
+          { id: 'zoology', name: 'Zoology', icon: '🦓' },
+          { id: 'physics', name: 'Physics', icon: '⚡' },
+          { id: 'chemistry', name: 'Chemistry', icon: '🧪' },
+          ...common
+        ];
+      } else {
+        return [
+          { id: 'commerce', name: 'Commerce', icon: '💼' },
+          { id: 'economics', name: 'Economics', icon: '📊' },
+          { id: 'civics', name: 'Civics', icon: '🏛️' },
+          ...common
+        ];
+      }
+    }
+  }
+
+  if (state === 'Tamil Nadu') {
+    if (level === 'class-1-5' || level === 'class-6-10') {
+      return [
+        { id: 'tamil', name: 'Tamil', icon: '📝' },
+        { id: 'english', name: 'English', icon: '📖' },
+        { id: 'math', name: 'Mathematics', icon: '📐' },
+        { id: 'science', name: 'Science', icon: '🔬' },
+        { id: 'social', name: 'Social Science', icon: '🌍' },
+      ];
+    }
+    if (level === 'intermediate') {
+      return [
+        { id: 'math', name: 'Mathematics', icon: '📐' },
+        { id: 'physics', name: 'Physics', icon: '⚡' },
+        { id: 'chemistry', name: 'Chemistry', icon: '🧪' },
+        { id: 'biology', name: 'Biology', icon: '🧬' },
+        { id: 'cscience', name: 'Computer Science', icon: '💻' },
+        { id: 'tamil', name: 'Tamil', icon: '📝' },
+        { id: 'english', name: 'English', icon: '📖' },
+      ];
+    }
+  }
+
+  // Default North India / Other State CBSE structure
+  if (level === 'class-1-5') {
+    return [
+      { id: 'hindi', name: 'Hindi', icon: '📝' },
+      { id: 'english', name: 'English', icon: '📖' },
+      { id: 'math', name: 'Mathematics', icon: '📐' },
+      { id: 'evs', name: 'EVS', icon: '🌍' },
+    ];
+  }
+  if (level === 'class-6-10') {
+    return [
+      { id: 'hindi', name: 'Hindi', icon: '📝' },
+      { id: 'english', name: 'English', icon: '📖' },
+      { id: 'math', name: 'Mathematics', icon: '📐' },
+      { id: 'science', name: 'Science', icon: '🔬' },
+      { id: 'social', name: 'Social Science', icon: '🌍' },
+    ];
+  }
+  if (level === 'intermediate') {
+    return [
+      { id: 'math', name: 'Mathematics', icon: '📐' },
+      { id: 'physics', name: 'Physics', icon: '⚡' },
+      { id: 'chemistry', name: 'Chemistry', icon: '🧪' },
+      { id: 'biology', name: 'Biology', icon: '🧬' },
+      { id: 'english', name: 'English Core', icon: '📖' },
+    ];
+  }
+
+  return SUBJECTS_BY_LEVEL['other'];
+}
+
 export function StudyProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null)
   const [studySessions, setStudySessions] = useState<StudySession[]>([])
@@ -186,35 +291,31 @@ export function StudyProvider({ children }: { children: ReactNode }) {
   const [isRunning, setIsRunning] = useState(false)
   const [focusMode, setFocusMode] = useState(false)
 
+  const loadUserData = useCallback((email: string) => {
+    const savedSessions = localStorage.getItem(`study-sessions-${email}`)
+    const savedResults = localStorage.getItem(`quiz-results-${email}`)
+    const savedFlashcards = localStorage.getItem(`study-flashcards-${email}`)
+    const savedRoadmaps = localStorage.getItem(`study-roadmaps-${email}`)
+    const savedDownloads = localStorage.getItem(`study-downloads-${email}`)
+
+    setStudySessions(savedSessions ? JSON.parse(savedSessions) : [])
+    setQuizResults(savedResults ? JSON.parse(savedResults) : [])
+    setFlashcards(savedFlashcards ? JSON.parse(savedFlashcards) : [])
+    setRoadmaps(savedRoadmaps ? JSON.parse(savedRoadmaps) : [])
+    setDownloadedTopics(savedDownloads ? JSON.parse(savedDownloads) : [])
+  }, [])
+
   useEffect(() => {
     // Load from localStorage on mount
     const savedUser = localStorage.getItem('study-user')
-    const savedSessions = localStorage.getItem('study-sessions')
-    const savedResults = localStorage.getItem('quiz-results')
-    const savedFlashcards = localStorage.getItem('study-flashcards')
-    const savedRoadmaps = localStorage.getItem('study-roadmaps')
-    const savedDownloads = localStorage.getItem('study-downloads')
 
     if (savedUser) {
-      setUser(JSON.parse(savedUser))
+      const parsedUser = JSON.parse(savedUser)
+      setUser(parsedUser)
       setIsAuthenticated(true)
+      loadUserData(parsedUser.email)
     }
-    if (savedSessions) {
-      setStudySessions(JSON.parse(savedSessions))
-    }
-    if (savedResults) {
-      setQuizResults(JSON.parse(savedResults))
-    }
-    if (savedFlashcards) {
-      setFlashcards(JSON.parse(savedFlashcards))
-    }
-    if (savedRoadmaps) {
-      setRoadmaps(JSON.parse(savedRoadmaps))
-    }
-    if (savedDownloads) {
-      setDownloadedTopics(JSON.parse(savedDownloads))
-    }
-  }, [])
+  }, [loadUserData])
 
   useEffect(() => {
     if (user && user.subjects && user.subjects.length > 0) {
@@ -229,16 +330,13 @@ export function StudyProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (user) {
       localStorage.setItem('study-user', JSON.stringify(user))
+      localStorage.setItem(`study-sessions-${user.email}`, JSON.stringify(studySessions))
+      localStorage.setItem(`quiz-results-${user.email}`, JSON.stringify(quizResults))
+      localStorage.setItem(`study-flashcards-${user.email}`, JSON.stringify(flashcards))
+      localStorage.setItem(`study-roadmaps-${user.email}`, JSON.stringify(roadmaps))
+      localStorage.setItem(`study-downloads-${user.email}`, JSON.stringify(downloadedTopics))
     }
-  }, [user])
-
-  useEffect(() => {
-    localStorage.setItem('study-sessions', JSON.stringify(studySessions))
-  }, [studySessions])
-
-  useEffect(() => {
-    localStorage.setItem('quiz-results', JSON.stringify(quizResults))
-  }, [quizResults])
+  }, [user, studySessions, quizResults, flashcards, roadmaps, downloadedTopics])
 
   const login = async (email: string, password: string): Promise<boolean> => {
     // Simulate login - in production, this would call an API
@@ -264,6 +362,7 @@ export function StudyProvider({ children }: { children: ReactNode }) {
             lastStudyDate: '',
           })
         }
+        loadUserData(email)
         setIsAuthenticated(true)
         return true
       }
@@ -302,6 +401,7 @@ export function StudyProvider({ children }: { children: ReactNode }) {
     }
 
     setUser(newProfile)
+    loadUserData(email)
     setIsAuthenticated(true)
     return true
   }
@@ -310,23 +410,25 @@ export function StudyProvider({ children }: { children: ReactNode }) {
     setUser(null)
     setIsAuthenticated(false)
     localStorage.removeItem('study-user')
+    setStudySessions([])
+    setQuizResults([])
+    setFlashcards([])
+    setRoadmaps([])
+    setDownloadedTopics([])
   }
 
   const updateProfile = (updates: Partial<UserProfile>) => {
     if (user) {
       const updatedUser = { ...user, ...updates }
 
-      // Update subjects based on education level and branch
-      if (updates.educationLevel || updates.branch) {
+      // Update subjects based on education level, branch, and state
+      if (updates.educationLevel || updates.branch || updates.state || updates.group) {
         const level = updates.educationLevel || user.educationLevel
         const branch = updates.branch || user.branch
+        const state = updates.state || user.state
+        const group = updates.group || user.group
 
-        let subjectKey: string = level
-        if (level === 'engineering' && branch) {
-          subjectKey = `engineering-${branch}`
-        }
-
-        updatedUser.subjects = SUBJECTS_BY_LEVEL[subjectKey] || SUBJECTS_BY_LEVEL['other']
+        updatedUser.subjects = getSubjectsForProfile(state, level, branch, group)
       }
 
       setUser(updatedUser)
@@ -437,7 +539,6 @@ export function StudyProvider({ children }: { children: ReactNode }) {
       interval: 0,
     }
     setFlashcards(prev => [...prev, newCard])
-    localStorage.setItem('study-flashcards', JSON.stringify([...flashcards, newCard]))
   }
 
   const reviewFlashcard = (id: string, quality: number) => {
@@ -461,7 +562,6 @@ export function StudyProvider({ children }: { children: ReactNode }) {
   const downloadTopic = (topicId: string) => {
     if (!downloadedTopics.includes(topicId)) {
       setDownloadedTopics(prev => [...prev, topicId])
-      localStorage.setItem('study-downloads', JSON.stringify([...downloadedTopics, topicId]))
     }
   }
 
@@ -476,7 +576,10 @@ export function StudyProvider({ children }: { children: ReactNode }) {
       ]
     }
     setRoadmaps(prev => [...prev, newRoadmap])
-    localStorage.setItem('study-roadmaps', JSON.stringify([...roadmaps, newRoadmap]))
+  }
+
+  const deleteRoadmap = (id: string) => {
+    setRoadmaps(prev => prev.filter(r => r.id !== id));
   }
 
   const getTodayStudyTime = (): number => {
@@ -556,6 +659,7 @@ export function StudyProvider({ children }: { children: ReactNode }) {
         downloadTopic,
         roadmaps,
         generateRoadmap,
+        deleteRoadmap,
         revisionReminders,
         timer: {
           timeLeft,
